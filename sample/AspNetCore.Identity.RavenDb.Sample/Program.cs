@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 
-namespace AspNetCore.Identity.RavenDb.Sample
+namespace Mcrio.AspNetCore.Identity.RavenDb.Sample
 {
     public class Program
     {

@@ -116,7 +116,7 @@
         <!--<Rule Id="SA1506" Action="None" />-->
         <!--<Rule Id="SA1507" Action="None" />-->
         <!--<Rule Id="SA1508" Action="None" />-->
-        <!--<Rule Id="SA1509" Action="None" />-->
+        <Rule Id="SA1509" Action="None" /><!-- opening parenthsis should not be preceeded by blank line -->
         <!--<Rule Id="SA1510" Action="None" />-->
         <!--<Rule Id="SA1511" Action="None" />-->
         <!--<Rule Id="SA1512" Action="None" />-->
@@ -128,7 +128,7 @@
         <!--<Rule Id="SA1518" Action="None" />-->
         <!--<Rule Id="SA1519" Action="None" />-->
         <!--<Rule Id="SA1520" Action="None" />-->
-<!--        <Rule Id="SA1600" Action="None" />&lt;!&ndash; 	Elements should be documented &ndash;&gt;-->
+        <Rule Id="SA1600" Action="None" /><!-- 	Elements should be documented &ndash;&gt;-->
         <!--<Rule Id="SA1601" Action="None" />-->
         <!--<Rule Id="SA1602" Action="None" />-->
         <!--<Rule Id="SA1605" Action="None" />-->
