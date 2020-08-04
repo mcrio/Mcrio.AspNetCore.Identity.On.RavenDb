@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <LangVersion>8</LangVersion>
+        <Nullable>enable</Nullable>
+        <AssemblyName>Mcrio.AspNetCore.Identity.On.RavenDb.Sample</AssemblyName>
+        <RootNamespace>Mcrio.AspNetCore.Identity.On.RavenDb.Sample</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="3.1.4" />
+        <PackageReference Include="StyleCop.Analyzers" Version="1.1.118" />
+        <PackageReference Include="RavenDB.Client" Version="4.2.103" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.Facebook" Version="3.1.6" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\AspNetCore.Identity.On.RavenDb\AspNetCore.Identity.On.RavenDb.csproj" />
+    </ItemGroup>
+
+</Project>

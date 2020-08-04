@@ -1,0 +1,39 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "sample", "sample", "{4B2763C8-FB48-4A73-97FD-B5C2B73EB922}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{3EADB12E-2159-4E15-A182-A30A22532F7F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore.Identity.On.RavenDb.Sample", "sample\AspNetCore.Identity.On.RavenDb.Sample\AspNetCore.Identity.On.RavenDb.Sample.csproj", "{95BA4775-41AF-4DCC-9BDA-93161B9F1CD9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore.Identity.On.RavenDb", "src\AspNetCore.Identity.On.RavenDb\AspNetCore.Identity.On.RavenDb.csproj", "{28C368BB-A712-4EEF-85F4-14A63E2080EC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{B893EA6E-99A3-49F7-B51B-6EB82E13D458}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mcrio.AspNetCore.Identity.On.RavenDb.Tests", "tests\Mcrio.AspNetCore.Identity.On.RavenDb.Tests\Mcrio.AspNetCore.Identity.On.RavenDb.Tests.csproj", "{522A9405-419B-47AC-B554-7B7B7E3D2716}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{95BA4775-41AF-4DCC-9BDA-93161B9F1CD9} = {4B2763C8-FB48-4A73-97FD-B5C2B73EB922}
+		{28C368BB-A712-4EEF-85F4-14A63E2080EC} = {3EADB12E-2159-4E15-A182-A30A22532F7F}
+		{522A9405-419B-47AC-B554-7B7B7E3D2716} = {B893EA6E-99A3-49F7-B51B-6EB82E13D458}
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{95BA4775-41AF-4DCC-9BDA-93161B9F1CD9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95BA4775-41AF-4DCC-9BDA-93161B9F1CD9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95BA4775-41AF-4DCC-9BDA-93161B9F1CD9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95BA4775-41AF-4DCC-9BDA-93161B9F1CD9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28C368BB-A712-4EEF-85F4-14A63E2080EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28C368BB-A712-4EEF-85F4-14A63E2080EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28C368BB-A712-4EEF-85F4-14A63E2080EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28C368BB-A712-4EEF-85F4-14A63E2080EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{522A9405-419B-47AC-B554-7B7B7E3D2716}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{522A9405-419B-47AC-B554-7B7B7E3D2716}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{522A9405-419B-47AC-B554-7B7B7E3D2716}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{522A9405-419B-47AC-B554-7B7B7E3D2716}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
