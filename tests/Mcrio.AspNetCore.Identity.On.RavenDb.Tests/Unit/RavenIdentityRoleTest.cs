@@ -17,10 +17,10 @@ namespace Mcrio.AspNetCore.Identity.RavenDb.Tests.Unit
             role.ClearClaims();
             role.Claims.Count.Should().Be(0, "because we cleared the claims.");
 
-            var claim1 = new Claim("type1", "value1");
-            var claim2 = new Claim("type1", "value2");
-            var claim3 = new Claim("type2", "value1");
-            var claim4 = new Claim("type2", "value2");
+            var claim1 = new RavenIdentityClaim("type1", "value1");
+            var claim2 = new RavenIdentityClaim("type1", "value2");
+            var claim3 = new RavenIdentityClaim("type2", "value1");
+            var claim4 = new RavenIdentityClaim("type2", "value2");
 
             role.HasClaim(claim1).Should().BeFalse("because claim was not added yet.");
             role.AddClaim(claim1);
@@ -50,7 +50,7 @@ namespace Mcrio.AspNetCore.Identity.RavenDb.Tests.Unit
         {
             var role = CreateTestRole();
             role.ClearClaims();
-            var newClaim = new Claim("type1", "value1");
+            var newClaim = new RavenIdentityClaim("type1", "value1");
 
             bool addNewResult = role.AddClaim(newClaim);
             addNewResult.Should().BeTrue("because we added a non existing claim.");
@@ -64,20 +64,20 @@ namespace Mcrio.AspNetCore.Identity.RavenDb.Tests.Unit
         {
             var role = CreateTestRole();
 
-            var claim1 = new Claim("type1", "value1");
-            var claim2 = new Claim("type1", "value2");
-            var claim3 = new Claim("type2", "value1");
-            var claim4 = new Claim("type2", "value2");
+            var claim1 = new RavenIdentityClaim("type1", "value1");
+            var claim2 = new RavenIdentityClaim("type1", "value2");
+            var claim3 = new RavenIdentityClaim("type2", "value1");
+            var claim4 = new RavenIdentityClaim("type2", "value2");
 
             role.AddClaim(claim1);
             role.AddClaim(claim2);
             role.AddClaim(claim3);
             role.Claims.Count.Should().Be(3);
 
-            role.RemoveClaim(claim4).Should().BeFalse("because claim does not exist in collection");
-            role.RemoveClaim(claim1).Should().BeTrue("because claim was in collection");
-            role.RemoveClaim(claim2).Should().BeTrue("because claim was in collection");
-            role.RemoveClaim(claim3).Should().BeTrue("because claim was in collection");
+            role.RemoveClaim(claim4.Type, claim4.Value).Should().BeFalse("because claim does not exist in collection");
+            role.RemoveClaim(claim1.Type, claim1.Value).Should().BeTrue("because claim was in collection");
+            role.RemoveClaim(claim2.Type, claim2.Value).Should().BeTrue("because claim was in collection");
+            role.RemoveClaim(claim3.Type, claim3.Value).Should().BeTrue("because claim was in collection");
 
             role.Claims.Count.Should().Be(0);
         }

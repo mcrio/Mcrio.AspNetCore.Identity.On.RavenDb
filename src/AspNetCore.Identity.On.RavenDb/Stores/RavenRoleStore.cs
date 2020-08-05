@@ -20,7 +20,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
     /// <summary>
     /// Class that represents the RavenDB implementation for the identity role store.
     /// </summary>
-    public class RavenRoleStore : RavenRoleStore<RavenIdentityRole, string, RavenIdentityClaim, RavenIdentityUser>
+    public class RavenRoleStore : RavenRoleStore<RavenIdentityRole, string, RavenIdentityClaim, RavenIdentityUser,
+        RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenRoleStore"/> class.
@@ -35,6 +36,12 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             : base(documentSession, errorDescriber, logger)
         {
         }
+
+        /// <inheritdoc/>
+        protected override RavenIdentityClaim CreateRoleClaim(Claim claim)
+        {
+            return new RavenIdentityClaim(claim);
+        }
     }
 
     /// <summary>
@@ -44,12 +51,18 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
     /// <typeparam name="TKey">Role id type.</typeparam>
     /// <typeparam name="TRoleClaim">Role claim type.</typeparam>
     /// <typeparam name="TUser">User type.</typeparam>
-    public class RavenRoleStore<TRole, TKey, TRoleClaim, TUser> :
+    /// <typeparam name="TUserClaim">User claim type.</typeparam>
+    /// <typeparam name="TUserLogin">User login type.</typeparam>
+    /// <typeparam name="TUserToken">User token type.</typeparam>
+    public abstract class RavenRoleStore<TRole, TKey, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken> :
         IRoleClaimStore<TRole>, IQueryableRoleStore<TRole>
-        where TRole : RavenIdentityRole<TKey>
+        where TRole : RavenIdentityRole<TKey, TRoleClaim>
         where TKey : IEquatable<TKey>
         where TRoleClaim : RavenIdentityClaim
-        where TUser : RavenIdentityUser<TKey>
+        where TUser : RavenIdentityUser<TKey, TUserClaim, TUserLogin, TUserToken>
+        where TUserClaim : RavenIdentityClaim
+        where TUserLogin : RavenIdentityUserLogin
+        where TUserToken : RavenIdentityToken
     {
         private bool _disposed;
 
@@ -59,10 +72,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <param name="documentSession">Document session.</param>
         /// <param name="errorDescriber">Error describer.</param>
         /// <param name="logger">Logger.</param>
-        public RavenRoleStore(
+        protected RavenRoleStore(
             IAsyncDocumentSession documentSession,
             IdentityErrorDescriber errorDescriber,
-            ILogger<RavenRoleStore<TRole, TKey, TRoleClaim, TUser>> logger)
+            ILogger<RavenRoleStore<TRole, TKey, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken>> logger)
         {
             DocumentSession = documentSession ?? throw new ArgumentNullException(nameof(documentSession));
             ErrorDescriber = errorDescriber ?? throw new ArgumentNullException(nameof(errorDescriber));
@@ -93,7 +106,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <summary>
         /// Gets or sets the logger.
         /// </summary>
-        protected virtual ILogger<RavenRoleStore<TRole, TKey, TRoleClaim, TUser>> Logger { get; }
+        protected virtual ILogger<RavenRoleStore<TRole, TKey, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken>>
+            Logger { get; }
 
         /// <inheritdoc/>
         public virtual void Dispose() => _disposed = true;
@@ -204,8 +218,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 ).ConfigureAwait(false);
 
                 string changeVector = DocumentSession.Advanced.GetChangeVectorFor(role);
-                await DocumentSession.StoreAsync(role, changeVector, role.Id.ToString(), cancellationToken);
-                await SaveChangesAsync(cancellationToken);
+                await DocumentSession
+                    .StoreAsync(role, changeVector, role.Id.ToString(), cancellationToken)
+                    .ConfigureAwait(false);
+                await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 saveSuccess = true;
             }
             catch (UniqueValueExistsException ex)
@@ -280,7 +296,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             try
             {
                 DocumentSession.Delete(role.Id.ToString(), changeVector);
-                await SaveChangesAsync(cancellationToken);
+                await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 saveSuccess = true;
             }
             catch (ConcurrencyException)
@@ -449,7 +465,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 throw new ArgumentNullException(nameof(claim));
             }
 
-            role.AddClaim(claim);
+            role.AddClaim(CreateRoleClaim(claim));
             return Task.CompletedTask;
         }
 
@@ -471,9 +487,16 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 throw new ArgumentNullException(nameof(claim));
             }
 
-            role.RemoveClaim(claim);
+            role.RemoveClaim(claim.Type, claim.Value);
             return Task.CompletedTask;
         }
+
+        /// <summary>
+        /// Creates a role claim.
+        /// </summary>
+        /// <param name="claim">Source claim.</param>
+        /// <returns>Role claim.</returns>
+        protected abstract TRoleClaim CreateRoleClaim(Claim claim);
 
         /// <summary>
         /// Throws and <see cref="ObjectDisposedException"/> if object was disposed.

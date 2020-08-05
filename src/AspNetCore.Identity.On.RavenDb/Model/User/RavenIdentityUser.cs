@@ -8,9 +8,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
 {
     /// <summary>
     /// Class that represents the RavenDB Identity User.
-    /// todo: check if Logins will be better of with a separate collection.
     /// </summary>
-    public class RavenIdentityUser : RavenIdentityUser<string>
+    public class
+        RavenIdentityUser : RavenIdentityUser<string, RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
@@ -34,13 +34,20 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
     /// Class that represents the RavenDB Identity User.
     /// </summary>
     /// <typeparam name="TKey">Type of the Id property.</typeparam>
-    public class RavenIdentityUser<TKey> : IdentityUser<TKey>, IClaimsReader, IClaimsWriter
+    /// <typeparam name="TUserClaim">Type of user claim.</typeparam>
+    /// <typeparam name="TUserLogin">Type of user login.</typeparam>
+    /// <typeparam name="TUserToken">Type of user token.</typeparam>
+    public abstract class RavenIdentityUser<TKey, TUserClaim, TUserLogin, TUserToken>
+        : IdentityUser<TKey>, IClaimsReader<TUserClaim>, IClaimsWriter<TUserClaim>
         where TKey : IEquatable<TKey>
+        where TUserClaim : RavenIdentityClaim
+        where TUserLogin : RavenIdentityUserLogin
+        where TUserToken : RavenIdentityToken
     {
-        private HashSet<TKey> _roles = new HashSet<TKey>();
-        private List<UserLoginInfo> _logins = new List<UserLoginInfo>();
-        private List<RavenIdentityToken> _tokens = new List<RavenIdentityToken>();
-        private List<RavenIdentityClaim> _claims = new List<RavenIdentityClaim>();
+        private HashSet<TKey> _roleIds = new HashSet<TKey>();
+        private List<TUserLogin> _logins = new List<TUserLogin>();
+        private List<TUserToken> _tokens = new List<TUserToken>();
+        private List<TUserClaim> _claims = new List<TUserClaim>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
@@ -68,7 +75,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityUser{TKey}"/> class.
         /// </summary>
-        public RavenIdentityUser()
+        protected RavenIdentityUser()
         {
         }
 
@@ -84,12 +91,16 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.Now;
 
         /// <inheritdoc/>
-        public IReadOnlyList<RavenIdentityClaim> Claims => _claims.AsReadOnly();
+        public IReadOnlyList<TUserClaim> Claims
+        {
+            get => _claims.AsReadOnly();
+            private set => _claims = new List<TUserClaim>(value);
+        }
 
         /// <inheritdoc/>
-        IReadOnlyList<RavenIdentityClaim> IClaimsWriter.Claims
+        IReadOnlyList<TUserClaim> IClaimsWriter<TUserClaim>.Claims
         {
-            set => _claims = new List<RavenIdentityClaim>(value);
+            set => _claims = new List<TUserClaim>(value);
         }
 
         /// <summary>
@@ -97,26 +108,26 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// </summary>
         public IEnumerable<TKey> Roles
         {
-            get => _roles.ToList().AsReadOnly();
-            private set => _roles = new HashSet<TKey>(value);
+            get => _roleIds.ToList().AsReadOnly();
+            private set => _roleIds = new HashSet<TKey>(value);
         }
 
         /// <summary>
         /// List of <see cref="UserLoginInfo"/> the user has.
         /// </summary>
-        public IReadOnlyList<UserLoginInfo> Logins
+        public IReadOnlyList<TUserLogin> Logins
         {
             get => _logins.AsReadOnly();
-            private set => _logins = new List<UserLoginInfo>(value);
+            private set => _logins = new List<TUserLogin>(value);
         }
 
         /// <summary>
         /// List of <see cref="RavenIdentityToken"/> the user has.
         /// </summary>
-        public IReadOnlyList<RavenIdentityToken> Tokens
+        public IReadOnlyList<TUserToken> Tokens
         {
             get => _tokens.AsReadOnly();
-            private set => _tokens = new List<RavenIdentityToken>(value);
+            private set => _tokens = new List<TUserToken>(value);
         }
 
         /// <summary>
@@ -124,50 +135,29 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// </summary>
         /// <param name="roleId">Role id to check assignment for.</param>
         /// <returns>True if user is assigned to the role identified by the provided role id, otherwise False.</returns>
-        public bool HasRole(TKey roleId)
+        public virtual bool HasRole(TKey roleId)
         {
             if (roleId is null)
             {
                 throw new ArgumentNullException(nameof(roleId));
             }
 
-            return _roles.Contains(roleId);
+            return _roleIds.Contains(roleId);
         }
 
         /// <summary>
         /// Checks if the user has the given <see cref="UserLoginInfo"/>.
         /// </summary>
-        /// <param name="userLoginInfo">The <see cref="UserLoginInfo"/> we are looking for.</param>
+        /// <param name="userLogin">The <see cref="UserLoginInfo"/> we are looking for.</param>
         /// <returns>True if the user has the given <see cref="UserLoginInfo"/>.</returns>
-        public bool HasLogin(UserLoginInfo userLoginInfo)
+        public virtual bool HasLogin(TUserLogin userLogin)
         {
-            if (userLoginInfo is null)
+            if (userLogin is null)
             {
-                throw new ArgumentNullException(nameof(userLoginInfo));
+                throw new ArgumentNullException(nameof(userLogin));
             }
 
-            return HasLogin(userLoginInfo.LoginProvider, userLoginInfo.ProviderKey);
-        }
-
-        /// <summary>
-        /// Checks if the user has the given <see cref="UserLoginInfo"/>.
-        /// </summary>
-        /// <param name="loginProvider">Login provider.</param>
-        /// <param name="providerKey">Provider key.</param>
-        /// <returns>True if the user has a login matching the given parameters.</returns>
-        public bool HasLogin(string loginProvider, string providerKey)
-        {
-            if (loginProvider == null)
-            {
-                throw new ArgumentNullException(nameof(loginProvider));
-            }
-
-            if (providerKey == null)
-            {
-                throw new ArgumentNullException(nameof(providerKey));
-            }
-
-            return FindLogin(loginProvider, providerKey) != null;
+            return FindLogin(userLogin.LoginProvider, userLogin.ProviderKey) != null;
         }
 
         /// <summary>
@@ -176,7 +166,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// <param name="loginProvider">Login provider.</param>
         /// <param name="providerKey">Login provider key.</param>
         /// <returns><see cref="IdentityUserLogin{TKey}"/> that matches the given parameters or Null.</returns>
-        public IdentityUserLogin<TKey>? GetUserLogin(string loginProvider, string providerKey)
+        public virtual TUserLogin? GetUserLogin(string loginProvider, string providerKey)
         {
             if (loginProvider is null)
             {
@@ -188,19 +178,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
                 throw new ArgumentNullException(nameof(providerKey));
             }
 
-            UserLoginInfo? existingLogin = FindLogin(loginProvider, providerKey);
-            if (existingLogin != null)
-            {
-                return new IdentityUserLogin<TKey>
-                {
-                    UserId = Id,
-                    LoginProvider = existingLogin.LoginProvider,
-                    ProviderDisplayName = existingLogin.ProviderDisplayName,
-                    ProviderKey = existingLogin.ProviderKey,
-                };
-            }
-
-            return null;
+            return FindLogin(loginProvider, providerKey);
         }
 
         /// <summary>
@@ -208,7 +186,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// </summary>
         /// <param name="token">The token we are looking for.</param>
         /// <returns>True if the user has the given token.</returns>
-        public bool HasToken(IdentityUserToken<TKey> token)
+        public virtual bool HasToken(TUserToken token)
         {
             if (token == null)
             {
@@ -224,7 +202,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// <param name="loginProvider">Login provider.</param>
         /// <param name="tokenName">Token name.</param>
         /// <returns><see cref="IdentityUserToken{TKey}"/> if it exists otherwise Null.</returns>
-        public IdentityUserToken<TKey>? GetToken(string loginProvider, string tokenName)
+        public virtual TUserToken? GetToken(string loginProvider, string tokenName)
         {
             if (loginProvider == null)
             {
@@ -236,53 +214,30 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
                 throw new ArgumentNullException(nameof(tokenName));
             }
 
-            RavenIdentityToken? token = FindToken(loginProvider, tokenName);
-            if (token is null)
-            {
-                return null;
-            }
-
-            return new IdentityUserToken<TKey>
-            {
-                UserId = Id,
-                LoginProvider = token.LoginProvider,
-                Name = token.Name,
-                Value = token.Value,
-            };
+            return FindToken(loginProvider, tokenName);
         }
 
         /// <summary>
-        /// Sets a new value for an existing token identified by given login provider and token name.
+        /// Adds a new token if it does not exists, otherwise replaces the existing one.
         /// </summary>
-        /// <param name="loginProvider">Login provider.</param>
-        /// <param name="tokenName">Token name.</param>
-        /// <param name="value">New token value.</param>
-        internal void AddOrUpdateToken(string loginProvider, string tokenName, string value)
+        /// <param name="userToken">User token to add or use to replace an existing one.</param>
+        internal virtual void AddOrReplaceToken(TUserToken userToken)
         {
-            if (loginProvider == null)
+            if (userToken == null)
             {
-                throw new ArgumentNullException(nameof(loginProvider));
+                throw new ArgumentNullException(nameof(userToken));
             }
 
-            if (tokenName == null)
-            {
-                throw new ArgumentNullException(nameof(tokenName));
-            }
-
-            if (value == null)
-            {
-                throw new ArgumentNullException(nameof(value));
-            }
-
-            RavenIdentityToken? existingToken = FindToken(loginProvider, tokenName);
+            TUserToken? existingToken = FindToken(
+                userToken.LoginProvider,
+                userToken.Name
+            );
             if (existingToken != null)
             {
-                existingToken.Value = value;
+                _tokens.Remove(existingToken);
             }
-            else
-            {
-                _tokens.Add(new RavenIdentityToken(loginProvider, tokenName, value));
-            }
+
+            _tokens.Add(userToken);
         }
 
         /// <summary>
@@ -290,19 +245,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// </summary>
         /// <param name="loginProvider">Login provider.</param>
         /// <param name="tokenName">Token name.</param>
-        internal void RemoveToken(string loginProvider, string tokenName)
+        internal virtual void RemoveToken(string loginProvider, string tokenName)
         {
-            if (loginProvider == null)
-            {
-                throw new ArgumentNullException(nameof(loginProvider));
-            }
-
-            if (tokenName == null)
-            {
-                throw new ArgumentNullException(nameof(tokenName));
-            }
-
-            RavenIdentityToken? existingToken = FindToken(loginProvider, tokenName);
+            TUserToken? existingToken = FindToken(loginProvider, tokenName);
             if (existingToken != null)
             {
                 _tokens.Remove(existingToken);
@@ -313,88 +258,94 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// Assigns a role to the user.
         /// </summary>
         /// <param name="roleId">The role id we are assigning to the user.</param>
-        internal void AddRole(TKey roleId)
+        internal virtual void AddRole(TKey roleId)
         {
             if (roleId is null)
             {
                 throw new ArgumentNullException(nameof(roleId));
             }
 
-            _roles.Add(roleId);
+            _roleIds.Add(roleId);
         }
 
         /// <summary>
         /// Removes a role assigned to the user.
         /// </summary>
         /// <param name="roleId">The role id to remove from the role assignments.</param>
-        internal void RemoveRole(TKey roleId)
+        internal virtual void RemoveRole(TKey roleId)
         {
             if (roleId is null)
             {
                 throw new ArgumentNullException(nameof(roleId));
             }
 
-            _roles.Remove(roleId);
+            _roleIds.Remove(roleId);
         }
 
         /// <summary>
-        /// Adds a <see cref="UserLoginInfo"/> to the user.
+        /// Adds a user login to the user.
         /// </summary>
-        /// <param name="userLoginInfo">The <see cref="UserLoginInfo"/> we want to add.</param>
-        internal void AddLogin(UserLoginInfo userLoginInfo)
+        /// <param name="newUserLogin">The <see cref="TUserLogin"/> we want to add.</param>
+        internal virtual void AddLogin(TUserLogin newUserLogin)
         {
-            if (userLoginInfo is null)
+            if (newUserLogin is null)
             {
-                throw new ArgumentNullException(nameof(userLoginInfo));
+                throw new ArgumentNullException(nameof(newUserLogin));
             }
 
-            if (HasLogin(userLoginInfo))
+            if (HasLogin(newUserLogin))
             {
                 return;
             }
 
-            _logins.Add(userLoginInfo);
+            _logins.Add(newUserLogin);
         }
 
         /// <summary>
-        /// Removes the given <see cref="UserLoginInfo"/> from the user.
+        /// Removes the given <see cref="TUserLogin"/> from the user.
         /// </summary>
-        /// <param name="userLoginInfo">The <see cref="UserLoginInfo"/> to remove.</param>
-        internal void RemoveLogin(UserLoginInfo userLoginInfo)
+        /// <param name="userLoginToRemove">The <see cref="TUserLogin"/> to remove.</param>
+        internal virtual void RemoveLogin(TUserLogin userLoginToRemove)
         {
-            if (userLoginInfo is null)
+            if (userLoginToRemove is null)
             {
-                throw new ArgumentNullException(nameof(userLoginInfo));
+                throw new ArgumentNullException(nameof(userLoginToRemove));
             }
 
-            RemoveLogin(userLoginInfo.LoginProvider, userLoginInfo.ProviderKey);
+            RemoveLogin(userLoginToRemove.LoginProvider, userLoginToRemove.ProviderKey);
         }
 
         /// <summary>
-        /// Removes the given <see cref="UserLoginInfo"/> from the user.
+        /// Removes the given <see cref="TUserLogin"/> from the user.
         /// </summary>
         /// <param name="loginProvider">Login provider.</param>
         /// <param name="providerKey">Provider key.</param>
-        internal void RemoveLogin(string loginProvider, string providerKey)
+        internal virtual void RemoveLogin(string loginProvider, string providerKey)
         {
-            if (string.IsNullOrWhiteSpace(loginProvider))
+            if (loginProvider == null)
             {
                 throw new ArgumentNullException(nameof(loginProvider));
             }
 
-            if (string.IsNullOrWhiteSpace(providerKey))
+            if (providerKey == null)
             {
                 throw new ArgumentNullException(nameof(providerKey));
             }
 
-            UserLoginInfo? existing = FindLogin(loginProvider, providerKey);
+            TUserLogin? existing = FindLogin(loginProvider, providerKey);
             if (existing != null)
             {
                 _logins.Remove(existing);
             }
         }
 
-        private RavenIdentityToken? FindToken(string loginProvider, string tokenName)
+        /// <summary>
+        /// Finds an existing user token if it exists.
+        /// </summary>
+        /// <param name="loginProvider">Login provider to search for.</param>
+        /// <param name="tokenName">Token name to search for.</param>
+        /// <returns>User token matching given parameters, otherwise Null.</returns>
+        protected virtual TUserToken? FindToken(string loginProvider, string tokenName)
         {
             return _tokens.SingleOrDefault(existing =>
                 existing.LoginProvider == loginProvider
@@ -402,7 +353,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
             );
         }
 
-        private UserLoginInfo? FindLogin(string loginProvider, string providerKey)
+        /// <summary>
+        /// Finds an existing user login if it exists.
+        /// </summary>
+        /// <param name="loginProvider">Login provider.</param>
+        /// <param name="providerKey">Provider key.</param>
+        /// <returns>User login that matches the given parameters otherwise Null.</returns>
+        protected virtual TUserLogin? FindLogin(string loginProvider, string providerKey)
         {
             return _logins.SingleOrDefault(existing =>
                 existing.LoginProvider == loginProvider && existing.ProviderKey == providerKey

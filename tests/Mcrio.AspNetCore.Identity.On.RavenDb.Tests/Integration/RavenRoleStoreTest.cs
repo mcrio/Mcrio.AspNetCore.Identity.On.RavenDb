@@ -16,7 +16,7 @@ using static Mcrio.AspNetCore.Identity.RavenDb.Tests.Initializer;
 
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 {
-    public class RavenRoleStoreTest : IntegrationTestsBase<RavenIdentityUser, string, RavenIdentityRole>
+    public class RavenRoleStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenIdentityRole>
     {
         [Fact]
         public async Task RoleStoreMethodsThrowWhenDisposedTest()
@@ -322,9 +322,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         public async Task ShouldAddNewClaimToRoleUsingManager()
         {
             var role = CreateTestRole();
-            role.AddClaim(new Claim("type1", "value1"));
-            role.AddClaim(new Claim("type1", "value2"));
-            var claim = new Claim("type2", "value1");
+            role.AddClaim(new RavenIdentityClaim(new Claim("type1", "value1")));
+            role.AddClaim(new RavenIdentityClaim(new Claim("type1", "value2")));
+            var claim = new RavenIdentityClaim(new Claim("type2", "value1"));
             role.AddClaim(claim);
             role.AddClaim(claim); // add duplicate claim
 
@@ -419,13 +419,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         public async Task ShouldAddMultipleRoleClaimsWithTheSameTypeButDifferentValuesUsingManager()
         {
             var role = CreateTestRole();
-            role.AddClaim(new Claim("type1", "value1"));
-            role.AddClaim(new Claim("type1", "value2"));
-            role.AddClaim(new Claim("type1", "value3"));
-            role.AddClaim(new Claim("type2", "value1"));
+            role.AddClaim(new RavenIdentityClaim("type1", "value1"));
+            role.AddClaim(new RavenIdentityClaim("type1", "value2"));
+            role.AddClaim(new RavenIdentityClaim("type1", "value3"));
+            role.AddClaim(new RavenIdentityClaim("type2", "value1"));
 
             // add duplicate just to make sure we ignore them
-            role.AddClaim(new Claim("type2", "value1"));
+            role.AddClaim(new RavenIdentityClaim("type2", "value1"));
 
             var scope = InitializeServices();
             (await scope.RoleManager.CreateAsync(role)).Succeeded.Should().BeTrue();
@@ -457,8 +457,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         public async Task ShouldUpdateClaimsOnExistingRoleUsingManager()
         {
             var role = CreateTestRole();
-            role.AddClaim(new Claim("type1", "value1"));
-            role.AddClaim(new Claim("type2", "value1"));
+            role.AddClaim(new RavenIdentityClaim("type1", "value1"));
+            role.AddClaim(new RavenIdentityClaim("type2", "value1"));
 
             var scope1 = InitializeServices();
             var manager1 = scope1.RoleManager;
@@ -468,8 +468,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             var retrievedRole = await manager2.FindByIdAsync(role.Id);
             retrievedRole.Should().NotBeNull();
 
-            retrievedRole.AddClaim(new Claim("type99", "99"));
-            retrievedRole.AddClaim(new Claim("type99", "99b"));
+            retrievedRole.AddClaim(new RavenIdentityClaim("type99", "99"));
+            retrievedRole.AddClaim(new RavenIdentityClaim("type99", "99b"));
 
             (await manager2.UpdateAsync(retrievedRole)).Succeeded.Should().BeTrue();
             WaitForIndexing(scope1.DocumentStore);
@@ -479,13 +479,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             retrievedRole.Should().NotBeNull();
             retrievedRole.Claims.Count.Should().Be(4);
 
-            retrievedRole.RemoveClaim(new Claim("type1", "value1"));
+            retrievedRole.RemoveClaim("type1", "value1");
             await manager3.UpdateAsync(retrievedRole);
 
             retrievedRole = await InitializeServices().RoleManager.FindByIdAsync(role.Id);
             retrievedRole.Should().NotBeNull();
             retrievedRole.Claims.Count.Should().Be(3);
-            retrievedRole.HasClaim(new Claim("type1", "value1")).Should().BeFalse();
+            retrievedRole.HasClaim(new RavenIdentityClaim("type1", "value1")).Should().BeFalse();
         }
 
         [Fact]
@@ -515,7 +515,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             RavenIdentityRole toBeUpdated = await scope.RoleManager.FindByIdAsync(role.Id);
             toBeUpdated.Should().NotBeNull();
             toBeUpdated.Claims.Count.Should().Be(0, "because we added no claims initially");
-            toBeUpdated.AddClaim(new Claim("a", "b"));
+            toBeUpdated.AddClaim(new RavenIdentityClaim("a", "b"));
             (await scope.RoleManager.UpdateAsync(toBeUpdated)).Succeeded.Should().BeTrue();
 
             var retrievedFromDb = await InitializeServices().RoleManager.FindByIdAsync(role.Id);
@@ -575,10 +575,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             // update in second session
             var manager2 = InitializeServices().RoleManager;
             var toUpdateInBackground = await manager2.FindByIdAsync(role.Id);
-            toUpdateInBackground.AddClaim(new Claim("foo", "bar"));
+            toUpdateInBackground.AddClaim(new RavenIdentityClaim("foo", "bar"));
             (await manager2.UpdateAsync(toUpdateInBackground)).Succeeded.Should().BeTrue();
 
-            role.AddClaim(new Claim("baz", "baz"));
+            role.AddClaim(new RavenIdentityClaim("baz", "baz"));
             var updateResult = await manager.UpdateAsync(role);
             updateResult.Succeeded.Should().BeFalse();
             updateResult.Errors
@@ -597,7 +597,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             // update in second session
             var manager2 = InitializeServices().RoleManager;
             var toUpdateInBackground = await manager2.FindByIdAsync(role.Id);
-            toUpdateInBackground.AddClaim(new Claim("foo", "bar"));
+            toUpdateInBackground.AddClaim(new RavenIdentityClaim("foo", "bar"));
             (await manager2.UpdateAsync(toUpdateInBackground)).Succeeded.Should().BeTrue();
 
             var deleteResult = await manager.DeleteAsync(role);
@@ -614,7 +614,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         public async Task ShouldAddClaimsUsingManager()
         {
             var role = CreateTestRole();
-            role.AddClaim(new Claim("test", "test"));
+            role.AddClaim(new RavenIdentityClaim("test", "test"));
             await InitializeServices().RoleManager.CreateAsync(role);
 
             var scope = InitializeServices();
@@ -642,8 +642,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         public async Task ShouldGetClaimsUsingManager()
         {
             var role = CreateTestRole();
-            role.AddClaim(new Claim("test", "test"));
-            role.AddClaim(new Claim("test2", "test2"));
+            role.AddClaim(new RavenIdentityClaim("test", "test"));
+            role.AddClaim(new RavenIdentityClaim("test2", "test2"));
             await InitializeServices().RoleManager.CreateAsync(role);
 
             var manager = InitializeServices().RoleManager;
@@ -661,8 +661,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         public async Task ShouldRemoveClaimsUsingManager()
         {
             var role = CreateTestRole();
-            role.AddClaim(new Claim("test", "test"));
-            role.AddClaim(new Claim("test2", "test2"));
+            role.AddClaim(new RavenIdentityClaim("test", "test"));
+            role.AddClaim(new RavenIdentityClaim("test2", "test2"));
             await InitializeServices().RoleManager.CreateAsync(role);
 
             var scope = InitializeServices();

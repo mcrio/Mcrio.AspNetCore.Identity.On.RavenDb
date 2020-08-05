@@ -5,11 +5,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims
     /// <summary>
     /// Provides an abstraction for writing identity claims.
     /// </summary>
-    internal interface IClaimsWriter
+    /// <typeparam name="TRoleClaim">Type of role claim.</typeparam>
+    internal interface IClaimsWriter<in TRoleClaim>
+        where TRoleClaim : RavenIdentityClaim
     {
         /// <summary>
         /// Sets the claims.
         /// </summary>
-        IReadOnlyList<RavenIdentityClaim> Claims { set; }
+        IReadOnlyList<TRoleClaim> Claims { set; }
     }
 }

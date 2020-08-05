@@ -28,19 +28,19 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         }
 
         /// <summary>
-        /// Gets or sets the LoginProvider this token is from.
+        /// Sets the LoginProvider this token is from.
         /// </summary>
-        public string LoginProvider { get; set; } = null!;
+        public string LoginProvider { get; private set; } = null!;
 
         /// <summary>
-        /// Gets or sets the name of the token.
+        /// Sets the name of the token.
         /// </summary>
-        public string Name { get; set; } = null!;
+        public string Name { get; private set; } = null!;
 
         /// <summary>
-        /// Gets or sets the token value.
+        /// Sets the token value.
         /// </summary>
         [ProtectedPersonalData]
-        public string Value { get; set; } = null!;
+        public string Value { get; private set; } = null!;
     }
 }

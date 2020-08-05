@@ -18,7 +18,7 @@ using static Mcrio.AspNetCore.Identity.RavenDb.Tests.Initializer;
 
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 {
-    public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, string, RavenIdentityRole>
+    public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenIdentityRole>
     {
         [Fact]
         public async Task UserStoreMethodsThrowWhenDisposedTest()
@@ -500,11 +500,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             var retrievedUser = await manager2.FindByIdAsync(user.Id);
             retrievedUser.Logins.Count.Should().Be(2);
             retrievedUser
-                .HasLogin(new UserLoginInfo("provider", "key", "displayName"))
+                .HasLogin(new RavenIdentityUserLogin("provider", "key", "displayName"))
                 .Should()
                 .BeTrue();
             retrievedUser
-                .HasLogin(new UserLoginInfo("provider2", "key2", "displayName"))
+                .HasLogin(new RavenIdentityUserLogin("provider2", "key2", "displayName"))
                 .Should()
                 .BeTrue();
 
@@ -1380,8 +1380,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             user.AddRole(role1.Id);
             user.AddRole(role2.Id);
 
-            user.AddClaim(new Claim(claim1Type, claim1Value));
-            user.AddClaim(new Claim(claim2Type, claim2Value));
+            user.AddClaim(new RavenIdentityClaim(claim1Type, claim1Value));
+            user.AddClaim(new RavenIdentityClaim(claim2Type, claim2Value));
 
             await scope.UserManager.CreateAsync(user);
             return user;

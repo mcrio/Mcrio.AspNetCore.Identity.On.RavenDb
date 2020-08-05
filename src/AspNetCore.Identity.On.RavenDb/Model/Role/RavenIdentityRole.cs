@@ -8,7 +8,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role
     /// <summary>
     /// class that represents the Identity Role.
     /// </summary>
-    public class RavenIdentityRole : RavenIdentityRole<string>
+    public class RavenIdentityRole : RavenIdentityRole<string, RavenIdentityClaim>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityRole"/> class.
@@ -32,8 +32,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role
     /// Class representing the user identity role.
     /// </summary>
     /// <typeparam name="TKey">Type of the Id.</typeparam>
-    public class RavenIdentityRole<TKey> : IdentityRole<TKey>, IClaimsReader, IClaimsWriter
+    /// <typeparam name="TRoleClaim">Type of role claim.</typeparam>
+    public abstract class RavenIdentityRole<TKey, TRoleClaim> : IdentityRole<TKey>, IClaimsReader<TRoleClaim>,
+        IClaimsWriter<TRoleClaim>
         where TKey : IEquatable<TKey>
+        where TRoleClaim : RavenIdentityClaim
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityRole"/> class.
@@ -60,11 +63,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role
         public override string ConcurrencyStamp { get; set; } = string.Empty;
 
         /// <inheritdoc/>
-        public IReadOnlyList<RavenIdentityClaim> Claims { get; private set; } =
-            new List<RavenIdentityClaim>().AsReadOnly();
+        public IReadOnlyList<TRoleClaim> Claims { get; private set; } =
+            new List<TRoleClaim>().AsReadOnly();
 
         /// <inheritdoc/>
-        IReadOnlyList<RavenIdentityClaim> IClaimsWriter.Claims
+        IReadOnlyList<TRoleClaim> IClaimsWriter<TRoleClaim>.Claims
         {
             set => Claims = value;
         }

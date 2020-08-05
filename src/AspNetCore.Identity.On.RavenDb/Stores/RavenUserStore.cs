@@ -20,7 +20,8 @@ using Raven.Client.Exceptions;
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 {
     /// <inheritdoc />
-    public class RavenUserStore : RavenUserStore<RavenIdentityUser, RavenIdentityRole, string>
+    public class RavenUserStore : RavenUserStore<RavenIdentityUser, string, RavenIdentityClaim,
+        RavenIdentityToken, RavenIdentityUserLogin, RavenIdentityRole, RavenIdentityClaim>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenUserStore"/> class.
@@ -37,14 +38,46 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             : base(documentSession, describer, optionsAccessor, logger)
         {
         }
+
+        /// <inheritdoc />
+        protected override RavenIdentityClaim CreateUserClaim(Claim claim)
+        {
+            return new RavenIdentityClaim(claim);
+        }
+
+        /// <inheritdoc />
+        protected override RavenIdentityToken CreateUserToken(string loginProvider, string tokenName, string tokenValue)
+        {
+            return new RavenIdentityToken(
+                loginProvider,
+                tokenName,
+                tokenValue
+            );
+        }
+
+        /// <inheritdoc />
+        protected override RavenIdentityUserLogin CreateUserLogin(UserLoginInfo loginInfo)
+        {
+            return new RavenIdentityUserLogin(
+                loginInfo.LoginProvider,
+                loginInfo.ProviderKey,
+                loginInfo.ProviderDisplayName
+            );
+        }
     }
 
     /// <inheritdoc />
-    public class RavenUserStore<TUser, TRole, TKey> : RavenUserStore<TUser, TRole, TKey, IdentityUserClaim<TKey>,
-        IdentityUserRole<TKey>, IdentityUserLogin<TKey>, IdentityUserToken<TKey>, IdentityRoleClaim<TKey>>
-        where TUser : RavenIdentityUser<TKey>
-        where TRole : RavenIdentityRole<TKey>
+    public abstract class RavenUserStore<TUser, TKey, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim>
+        : RavenUserStore<TUser, TKey, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim, IdentityUserClaim<TKey>,
+            IdentityUserRole<TKey>, IdentityUserLogin<TKey>, IdentityUserToken<TKey>,
+            IdentityRoleClaim<TKey>>
+        where TUser : RavenIdentityUser<TKey, TUserClaim, TUserLogin, TUserToken>
+        where TRole : RavenIdentityRole<TKey, TRoleClaim>
         where TKey : IEquatable<TKey>
+        where TUserClaim : RavenIdentityClaim
+        where TRoleClaim : RavenIdentityClaim
+        where TUserToken : RavenIdentityToken
+        where TUserLogin : RavenIdentityUserLogin
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenUserStore{TUser, TRole, TKey}"/> class.
@@ -53,34 +86,54 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <param name="describer">Error describer.</param>
         /// <param name="optionsAccessor">Identity options accessor.</param>
         /// <param name="logger">Logger.</param>
-        public RavenUserStore(
+        protected RavenUserStore(
             IAsyncDocumentSession documentSession,
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
-            ILogger<RavenUserStore<TUser, TRole, TKey>> logger)
+            ILogger<RavenUserStore<TUser, TKey, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim>> logger)
             : base(documentSession, describer, optionsAccessor, logger)
         {
         }
     }
 
     /// <inheritdoc />
-    public class RavenUserStore<TUser, TRole, TKey, TUserClaim, TUserRole, TUserLogin, TUserToken, TRoleClaim> :
-        UserStoreBase<TUser, TRole, TKey, TUserClaim, TUserRole, TUserLogin, TUserToken, TRoleClaim>
-        where TUser : RavenIdentityUser<TKey>
-        where TRole : RavenIdentityRole<TKey>
+    public abstract class RavenUserStore<TUser, TKey, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim,
+        TAspUserClaim, TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim> :
+        UserStoreBase<TUser, TRole, TKey, TAspUserClaim, TAspUserRole, TAspUserLogin,
+            TAspUserToken, TAspRoleClaim>
+        where TUser : RavenIdentityUser<TKey, TUserClaim, TUserLogin, TUserToken>
+        where TRole : RavenIdentityRole<TKey, TRoleClaim>
+        where TRoleClaim : RavenIdentityClaim
         where TKey : IEquatable<TKey>
-        where TUserClaim : IdentityUserClaim<TKey>, new()
-        where TUserRole : IdentityUserRole<TKey>, new()
-        where TUserLogin : IdentityUserLogin<TKey>, new()
-        where TUserToken : IdentityUserToken<TKey>, new()
-        where TRoleClaim : IdentityRoleClaim<TKey>, new()
+        where TUserClaim : RavenIdentityClaim
+        where TUserToken : RavenIdentityToken
+        where TUserLogin : RavenIdentityUserLogin
+        where TAspUserClaim : IdentityUserClaim<TKey>, new()
+        where TAspUserRole : IdentityUserRole<TKey>, new()
+        where TAspUserLogin : IdentityUserLogin<TKey>, new()
+        where TAspUserToken : IdentityUserToken<TKey>, new()
+        where TAspRoleClaim : IdentityRoleClaim<TKey>, new()
     {
-        protected readonly IAsyncDocumentSession DocumentSession;
-        protected readonly IOptions<IdentityOptions> OptionsAccessor;
-
-        protected readonly
-            ILogger<RavenUserStore<TUser, TRole, TKey, TUserClaim, TUserRole, TUserLogin, TUserToken, TRoleClaim>>
-            Logger;
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RavenUserStore"/> class.
+        /// </summary>
+        /// <param name="documentSession">Document session.</param>
+        /// <param name="describer">Error describer.</param>
+        /// <param name="optionsAccessor">Identity options accessor.</param>
+        /// <param name="logger">Logger.</param>
+        protected RavenUserStore(
+            IAsyncDocumentSession documentSession,
+            IdentityErrorDescriber describer,
+            IOptions<IdentityOptions> optionsAccessor,
+            ILogger<RavenUserStore<TUser, TKey, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim, TAspUserClaim,
+                    TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim>>
+                logger)
+            : base(describer)
+        {
+            DocumentSession = documentSession ?? throw new ArgumentNullException(nameof(documentSession));
+            OptionsAccessor = optionsAccessor;
+            Logger = logger;
+        }
 
         /// <summary>
         /// User properties that may require unique value.
@@ -98,26 +151,6 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             Email,
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RavenUserStore{TUser, TRole, TKey, TUserClaim, TUserRole, TUserLogin, TUserToken, TRoleClaim}"/> class.
-        /// </summary>
-        /// <param name="documentSession">Document session.</param>
-        /// <param name="describer">Error describer.</param>
-        /// <param name="optionsAccessor">Identity options accessor.</param>
-        /// <param name="logger">Logger.</param>
-        public RavenUserStore(
-            IAsyncDocumentSession documentSession,
-            IdentityErrorDescriber describer,
-            IOptions<IdentityOptions> optionsAccessor,
-            ILogger<RavenUserStore<TUser, TRole, TKey, TUserClaim, TUserRole, TUserLogin, TUserToken, TRoleClaim>>
-                logger)
-            : base(describer)
-        {
-            DocumentSession = documentSession ?? throw new ArgumentNullException(nameof(documentSession));
-            OptionsAccessor = optionsAccessor;
-            Logger = logger;
-        }
-
         /// <inheritdoc/>
         public override IQueryable<TUser> Users => DocumentSession.Query<TUser>();
 
@@ -128,6 +161,23 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// True if changes should be automatically persisted, otherwise false.
         /// </value>
         public virtual bool AutoSaveChanges { get; set; } = true;
+
+        /// <summary>
+        /// RavenDB document session.
+        /// </summary>
+        protected IAsyncDocumentSession DocumentSession { get; }
+
+        /// <summary>
+        /// Identity options accessor.
+        /// </summary>
+        protected IOptions<IdentityOptions> OptionsAccessor { get; }
+
+        /// <summary>
+        /// Logger.
+        /// </summary>
+        protected ILogger<RavenUserStore<TUser, TKey, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim,
+            TAspUserClaim,
+            TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim>> Logger { get; }
 
         /// <summary>
         /// Creates a new user.
@@ -197,7 +247,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 await DocumentSession
                     .StoreAsync(user, string.Empty, user.Id?.ToString(), cancellationToken)
                     .ConfigureAwait(false);
-                await SaveChangesAsync(cancellationToken);
+                await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 saveSuccess = true;
                 return IdentityResult.Success;
             }
@@ -287,7 +337,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
                 await DocumentSession.StoreAsync(user, changeVector, user.Id.ToString(), cancellationToken)
                     .ConfigureAwait(false);
-                await SaveChangesAsync(cancellationToken);
+                await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 saveSuccess = true;
             }
             catch (UniqueValueExistsException ex)
@@ -372,7 +422,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             try
             {
                 DocumentSession.Delete(user.Id.ToString(), changeVector);
-                await SaveChangesAsync(cancellationToken);
+                await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 saveSuccess = true;
             }
             catch (ConcurrencyException)
@@ -483,7 +533,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             foreach (Claim claim in claims)
             {
-                user.AddClaim(claim);
+                user.AddClaim(CreateUserClaim(claim));
             }
 
             return Task.CompletedTask;
@@ -513,7 +563,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            user.ReplaceClaim(claim, newClaim);
+            user.ReplaceClaim(CreateUserClaim(claim), CreateUserClaim(newClaim));
 
             return Task.CompletedTask;
         }
@@ -538,7 +588,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             foreach (Claim claim in claims)
             {
-                user.RemoveClaim(claim);
+                user.RemoveClaim(claim.Type, claim.Value);
             }
 
             return Task.CompletedTask;
@@ -556,7 +606,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            // todo: AspNet Core by default does not implement pagination!!! let's set return count to 1000
+            // note: AspNet Core by default does not implement pagination!!! let's set return count to 1000.
             return await DocumentSession.Query<TUser>()
                 .Where(user => user.Claims.Any(item => item.Type == claim.Type && item.Value == claim.Value))
                 .Take(1000)
@@ -588,14 +638,15 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            if (user.HasLogin(login))
+            TUserLogin userLogin = CreateUserLogin(login);
+            if (user.HasLogin(userLogin))
             {
                 return;
             }
 
             bool loginReservation = await DocumentSession.CreateReservationAsync(
                 RavenDbCompareExchangeExtension.ReservationType.Login,
-                GetLoginReservationUniqueValue(login.LoginProvider, login.ProviderKey),
+                GetLoginReservationUniqueValue(userLogin.LoginProvider, userLogin.ProviderKey),
                 user.Id.ToString()
             ).ConfigureAwait(false);
 
@@ -604,7 +655,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 return;
             }
 
-            user.AddLogin(login);
+            user.AddLogin(userLogin);
         }
 
         /// <inheritdoc/>
@@ -643,8 +694,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             var saveSuccess = false;
             try
             {
-                await DocumentSession.StoreAsync(user, changeVector, user.Id.ToString(), cancellationToken);
-                await SaveChangesAsync(cancellationToken);
+                await DocumentSession
+                    .StoreAsync(user, changeVector, user.Id.ToString(), cancellationToken)
+                    .ConfigureAwait(false);
+                await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 saveSuccess = true;
             }
             catch (ConcurrencyException)
@@ -684,7 +737,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            return Task.FromResult<IList<UserLoginInfo>>(new List<UserLoginInfo>(user.Logins));
+            return Task.FromResult<IList<UserLoginInfo>>(
+                user.Logins.Select(login => new UserLoginInfo(
+                    login.LoginProvider,
+                    login.ProviderKey,
+                    login.ProviderDisplayName
+                )).ToList()
+            );
         }
 
         /// <summary>
@@ -707,7 +766,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             return DocumentSession
                 .Query<TUser>()
-                .Where(user => user.Email == normalizedEmail)
+                .Where(user => user.NormalizedEmail == normalizedEmail)
                 .SingleOrDefaultAsync(token: cancellationToken);
         }
 
@@ -735,8 +794,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            var role = await FindRoleAsync(normalizedRoleName, cancellationToken);
-
+            var role = await FindRoleAsync(normalizedRoleName, cancellationToken).ConfigureAwait(false);
             return role != null && user.HasRole(role.Id);
         }
 
@@ -752,18 +810,16 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            ThrowIfCancelledOrDisposed(cancellationToken);
-
-            TRole role = await FindRoleAsync(normalizedRoleName, cancellationToken);
+            TRole role = await FindRoleAsync(normalizedRoleName, cancellationToken).ConfigureAwait(false);
 
             if (role is null)
             {
                 throw new InvalidOperationException($"Unknown role with normalized name {normalizedRoleName}");
             }
 
-            // todo: AspNet Core by default does not implement pagination!!! let's set return count to 1000
+            // note: AspNet Core by default does not implement pagination!!! let's set return count to 1000
             return await DocumentSession.Query<TUser>()
-                .Where(item => item.Roles.Any(roleId => roleId.Equals(role.Id)))
+                .Where(item => item.Roles.Contains(role.Id))
                 .Take(1000)
                 .ToListAsync(cancellationToken);
         }
@@ -786,7 +842,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            TRole role = await FindRoleAsync(normalizedRoleName, cancellationToken);
+            TRole role = await FindRoleAsync(normalizedRoleName, cancellationToken).ConfigureAwait(false);
 
             if (role is null)
             {
@@ -814,7 +870,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            TRole role = await FindRoleAsync(normalizedRoleName, cancellationToken);
+            TRole role = await FindRoleAsync(normalizedRoleName, cancellationToken).ConfigureAwait(false);
 
             if (role is null)
             {
@@ -877,8 +933,33 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             }
 
             ThrowIfCancelledOrDisposed(cancellationToken);
-            return AddUserTokenAsync(CreateUserToken(user, loginProvider, name, value));
+
+            user.AddOrReplaceToken(CreateUserToken(loginProvider, name, value));
+            return Task.CompletedTask;
         }
+
+        /// <summary>
+        /// Creates a <see cref="TUserClaim"/> object.
+        /// </summary>
+        /// <param name="claim">Source claim.</param>
+        /// <returns>A <see cref="TUserClaim"/> object.</returns>
+        protected abstract TUserClaim CreateUserClaim(Claim claim);
+
+        /// <summary>
+        /// Creates a <see cref="TUserToken"/> object.
+        /// </summary>
+        /// <param name="loginProvider">Login provider.</param>
+        /// <param name="tokenName">Token name.</param>
+        /// <param name="tokenValue">Token value.</param>
+        /// <returns>An object representing a <see cref="TUserToken"/> class.</returns>
+        protected abstract TUserToken CreateUserToken(string loginProvider, string tokenName, string tokenValue);
+
+        /// <summary>
+        /// Creates a <see cref="TUserLogin"/> object.
+        /// </summary>
+        /// <param name="loginInfo">Login info.</param>
+        /// <returns>An object representing the <see cref="TUserLogin"/> class.</returns>
+        protected abstract TUserLogin CreateUserLogin(UserLoginInfo loginInfo);
 
         /// <summary>
         /// Find user token by given parameters.
@@ -888,14 +969,26 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <param name="name">Token name.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-        protected override Task<TUserToken> FindTokenAsync(
+        protected override Task<TAspUserToken> FindTokenAsync(
             TUser user,
             string loginProvider,
             string name,
             CancellationToken cancellationToken)
         {
             ThrowIfCancelledOrDisposed(cancellationToken);
-            return Task.FromResult((TUserToken)user.GetToken(loginProvider, name)!);
+
+            TUserToken? userToken = user.GetToken(loginProvider, name);
+            if (userToken is null)
+            {
+                return Task.FromResult<TAspUserToken>(null!);
+            }
+
+            return Task.FromResult(CreateUserToken(
+                user,
+                userToken.LoginProvider,
+                userToken.Name,
+                userToken.Value
+            ));
         }
 
         /// <summary>
@@ -903,10 +996,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// </summary>
         /// <param name="userToken">User token information.</param>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-        protected override async Task AddUserTokenAsync(TUserToken userToken)
+        [Obsolete("We implement the functionality in SetTokenAsync directly.")]
+        protected override Task AddUserTokenAsync(TAspUserToken userToken)
         {
-            TUser user = await DocumentSession.LoadAsync<TUser>(userToken.UserId.ToString());
-            user?.AddOrUpdateToken(userToken.LoginProvider, userToken.Name, userToken.Value);
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -914,12 +1007,16 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// </summary>
         /// <param name="token">User token information.</param>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-        protected override async Task RemoveUserTokenAsync(TUserToken token)
+        protected override async Task RemoveUserTokenAsync(TAspUserToken token)
         {
             TUser user = await DocumentSession.LoadAsync<TUser>(token.UserId.ToString());
             user?.RemoveToken(token.LoginProvider, token.Name);
         }
 
+        /// <summary>
+        /// Throws if cancellation is requested or the object is disposed.
+        /// </summary>
+        /// <param name="token"></param>
         protected virtual void ThrowIfCancelledOrDisposed(CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
@@ -957,7 +1054,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <param name="providerKey">Provider key.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-        protected override async Task<TUserLogin> FindUserLoginAsync(
+        protected override async Task<TAspUserLogin> FindUserLoginAsync(
             TKey userId,
             string loginProvider,
             string providerKey,
@@ -983,7 +1080,17 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             var user = await DocumentSession.LoadAsync<TUser>(userId.ToString(), cancellationToken);
             if (user != null)
             {
-                return (TUserLogin)user.GetUserLogin(loginProvider, providerKey)!;
+                TUserLogin? userLogin = user.GetUserLogin(loginProvider, providerKey)!;
+                if (userLogin != null)
+                {
+                    return new TAspUserLogin
+                    {
+                        UserId = user.Id,
+                        LoginProvider = userLogin.LoginProvider,
+                        ProviderKey = userLogin.ProviderKey,
+                        ProviderDisplayName = userLogin.ProviderDisplayName,
+                    };
+                }
             }
 
             return null!;
@@ -996,7 +1103,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <param name="providerKey">Provider key.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-        protected override async Task<TUserLogin> FindUserLoginAsync(
+        protected override async Task<TAspUserLogin> FindUserLoginAsync(
             string loginProvider,
             string providerKey,
             CancellationToken cancellationToken)
@@ -1024,13 +1131,30 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             }
 
             string userId = reservationValue.Value;
-
             var user = await DocumentSession.LoadAsync<TUser>(userId, cancellationToken).ConfigureAwait(false);
 
-            IdentityUserLogin<TKey>? userLogin = user?.GetUserLogin(loginProvider, providerKey);
+            if (user is null)
+            {
+                Logger.LogError(
+                    $"Unknown user for data returned by compare exchange. Provider '{loginProvider}', user id '{userId}'.");
+                return null!;
+            }
 
-            // todo: here exception in case compare exchange does not match with the user login data
-            return (TUserLogin)userLogin!;
+            TUserLogin? userLogin = user.GetUserLogin(loginProvider, providerKey);
+            if (userLogin is null)
+            {
+                Logger.LogError(
+                    $"Compare exchange and user logins are not in sync for user {user.UserName}. User is missing a '{loginProvider}' login which is available in the compare exchange.");
+                return null!;
+            }
+
+            return new TAspUserLogin
+            {
+                UserId = user.Id,
+                LoginProvider = userLogin.LoginProvider,
+                ProviderKey = userLogin.ProviderKey,
+                ProviderDisplayName = userLogin.ProviderDisplayName,
+            };
         }
 
         /// <inheritdoc/>
@@ -1048,7 +1172,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         }
 
         /// <inheritdoc/>
-        protected override Task<TUserRole> FindUserRoleAsync(
+        protected override Task<TAspUserRole> FindUserRoleAsync(
             TKey userId,
             TKey roleId,
             CancellationToken cancellationToken)
@@ -1069,7 +1193,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 .Where(user =>
                     user.Id.Equals(userId)
                     && user.Roles.Any(rId => rId.Equals(roleId)))
-                .Select(user => new TUserRole()
+                .Select(user => new TAspUserRole
                 {
                     UserId = user.Id,
                     RoleId = roleId,

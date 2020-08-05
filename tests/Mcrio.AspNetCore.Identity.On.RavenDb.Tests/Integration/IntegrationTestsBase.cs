@@ -17,10 +17,9 @@ using Raven.TestDriver;
 
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 {
-    public abstract class IntegrationTestsBase<TUser, TKey, TRole> : RavenTestDriver
-        where TUser : RavenIdentityUser<TKey>
-        where TKey : IEquatable<TKey>
-        where TRole : RavenIdentityRole<TKey>
+    public abstract class IntegrationTestsBase<TUser, TRole> : RavenTestDriver
+        where TUser : RavenIdentityUser
+        where TRole : RavenIdentityRole
     {
         private IDocumentStore? _documentStore;
 
@@ -46,7 +45,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 options.Stores.ProtectPersonalData = protectPersonalData;
             }).AddDefaultTokenProviders();
 
-            serviceCollection.TryAddSingleton<IAsyncDocumentSession>(provider =>
+            serviceCollection.TryAddSingleton(provider =>
                 _documentStore.OpenAsyncSession()
             );
 

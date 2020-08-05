@@ -19,6 +19,15 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims
             Value = claimValue ?? throw new ArgumentNullException(nameof(claimValue));
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RavenIdentityClaim"/> class.
+        /// </summary>
+        /// <param name="claim">Claim.</param>
+        public RavenIdentityClaim(Claim claim)
+            : this(claim.Type, claim.Value)
+        {
+        }
+
         private RavenIdentityClaim()
         {
         }
@@ -32,21 +41,6 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims
         /// Gets the claim value for this claim.
         /// </summary>
         public string Value { get; private set; } = null!;
-
-        /// <summary>
-        /// Initializes by copying ClaimType and ClaimValue from the other claim.
-        /// </summary>
-        /// <param name="claim">The claim to initialize from.</param>
-        /// <returns>RavenDb identity role claim transformed from a Claim.</returns>
-        public static RavenIdentityClaim FromClaim(Claim claim)
-        {
-            if (claim == null)
-            {
-                throw new ArgumentNullException(nameof(claim));
-            }
-
-            return new RavenIdentityClaim(claim.Type, claim.Value);
-        }
 
         /// <summary>
         /// Constructs a new claim with the type and value.
