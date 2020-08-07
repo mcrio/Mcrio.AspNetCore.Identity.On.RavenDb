@@ -14,7 +14,7 @@ services:
     image: ravendb/ravendb:5.0-ubuntu-latest
     ports:
       - 32779:8080
-      - 38888:38888
+      # - 38888:38888
     volumes:
       - ravendb-data:/opt/RavenDB/Server/RavenData
       - ravendb-conf:/opt/RavenDB/config
