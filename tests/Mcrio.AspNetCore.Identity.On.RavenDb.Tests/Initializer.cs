@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Model;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 

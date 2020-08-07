@@ -20,21 +20,25 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
     /// <summary>
     /// Class that represents the RavenDB implementation for the identity role store.
     /// </summary>
-    public class RavenRoleStore : RavenRoleStore<RavenIdentityRole, string, RavenIdentityClaim, RavenIdentityUser,
+    public sealed class RavenRoleStore : RavenRoleStore<RavenIdentityRole, string, RavenIdentityClaim, RavenIdentityUser,
         RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenRoleStore"/> class.
         /// </summary>
-        /// <param name="documentSession">Document session.</param>
+        /// <param name="documentSessionProvider">Document session provider.</param>
         /// <param name="errorDescriber">Error describer.</param>
         /// <param name="logger">Logger.</param>
         public RavenRoleStore(
-            IAsyncDocumentSession documentSession,
+            DocumentSessionProvider documentSessionProvider,
             IdentityErrorDescriber errorDescriber,
             ILogger<RavenRoleStore> logger)
-            : base(documentSession, errorDescriber, logger)
+            : base(documentSessionProvider(), errorDescriber, logger)
         {
+            if (documentSessionProvider == null)
+            {
+                throw new ArgumentNullException(nameof(documentSessionProvider));
+            }
         }
 
         /// <inheritdoc/>
@@ -133,12 +137,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             ThrowIfCancelledOrDisposed(cancellationToken);
 
             string nameUniqueValue = role.NormalizedName;
-
             bool nameReservationResult = await DocumentSession.CreateReservationAsync<string>(
                 RavenDbCompareExchangeExtension.ReservationType.Role,
                 nameUniqueValue
             ).ConfigureAwait(false);
-
             if (!nameReservationResult)
             {
                 return IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.Name));
@@ -291,7 +293,6 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             }
 
             var changeVector = DocumentSession.Advanced.GetChangeVectorFor(role);
-
             var saveSuccess = false;
             try
             {

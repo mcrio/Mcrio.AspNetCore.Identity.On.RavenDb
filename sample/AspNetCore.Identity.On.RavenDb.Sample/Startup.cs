@@ -8,6 +8,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample
 {
@@ -23,32 +25,50 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            var urls = Configuration.GetSection("RavenDbUrls").Get<string[]>();
-            var database = Configuration.GetSection("RavenDbDatabase").Get<string>();
+            // Register document store
             IDocumentStore store = new DocumentStore
             {
-                Urls = urls,
-                Database = database,
+                Urls = Configuration.GetSection("RavenDbUrls").Get<string[]>(),
+                Database = Configuration.GetSection("RavenDbDatabase").Get<string>(),
+            };
+            store.Conventions.FindCollectionName = type =>
+            {
+                return IdentityRavenDbConventions
+                           .GetIdentityCollectionName<RavenIdentityUser, RavenIdentityRole>(type)
+                       ?? DocumentConventions.DefaultGetCollectionName(type);
             };
             store.Initialize();
             services.AddSingleton(store);
-            services.AddScoped(
-                provider => provider
-                    .GetRequiredService<IDocumentStore>()
-                    .OpenAsyncSession(database));
 
-            services.AddTransient<IdentityErrorDescriber>(provider => new IdentityErrorDescriber());
-            services.AddScoped<IUserStore<RavenIdentityUser>, RavenUserStore>();
-            services.AddScoped<IRoleStore<RavenIdentityRole>, RavenRoleStore>();
-            services.AddIdentity<RavenIdentityUser, RavenIdentityRole>(
+            // Register scoped document session
+            services.AddScoped(
+                provider => provider.GetRequiredService<IDocumentStore>().OpenAsyncSession()
+            );
+
+            // Add identity
+            services
+                .AddIdentity<RavenIdentityUser, RavenIdentityRole>(
                     options =>
                     {
                         options.User.RequireUniqueEmail = true;
-                        options.SignIn.RequireConfirmedEmail = true;
+                        options.SignIn.RequireConfirmedEmail = false;
                     }
                 )
+                .AddRavenDbStores(provider => provider.GetRequiredService<IAsyncDocumentSession>)
                 .AddDefaultUI()
                 .AddDefaultTokenProviders();
+
+            // Facebook test authentication
+            services.AddAuthentication(o =>
+                {
+                    o.DefaultScheme = IdentityConstants.ApplicationScheme;
+                    o.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+                })
+                .AddFacebook(facebookOptions =>
+                {
+                    facebookOptions.AppId = Configuration["FacebookAppId"];
+                    facebookOptions.AppSecret = Configuration["FacebookAppSecret"];
+                });
 
             services.AddRazorPages();
         }

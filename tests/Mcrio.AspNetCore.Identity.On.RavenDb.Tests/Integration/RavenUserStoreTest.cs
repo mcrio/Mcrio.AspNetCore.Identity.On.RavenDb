@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Model;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
@@ -24,7 +25,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         public async Task UserStoreMethodsThrowWhenDisposedTest()
         {
             RavenUserStore store = new RavenUserStore(
-                new Mock<IAsyncDocumentSession>().Object,
+                () => new Mock<IAsyncDocumentSession>().Object,
                 new IdentityErrorDescriber(),
                 Options.Create(new IdentityOptions()),
                 new Mock<ILogger<RavenUserStore>>().Object);
@@ -87,7 +88,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         public async Task UserStorePublicNullCheckTest()
         {
             RavenUserStore store = new RavenUserStore(
-                new Mock<IAsyncDocumentSession>().Object,
+                () => new Mock<IAsyncDocumentSession>().Object,
                 new IdentityErrorDescriber(),
                 Options.Create(new IdentityOptions()),
                 new Mock<ILogger<RavenUserStore>>().Object
@@ -294,6 +295,48 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             WaitForIndexing(scope.DocumentStore);
             (await InitializeServices().UserManager.FindByNameAsync(user.UserName)).Should().NotBeNull();
             (await InitializeServices().UserManager.FindByIdAsync(user.Id)).Should().NotBeNull();
+
+            await AssertCompareExchangeKeyExistsAsync($"identusern/{user.NormalizedUserName}", "user was created");
+            await AssertCompareExchangeKeyDoesNotExistAsync(
+                $"identemail/{user.NormalizedEmail}",
+                "unique email is not required"
+            );
+
+            WaitForUserToContinueTheTest(scope.DocumentStore);
+        }
+
+        [Fact]
+        public async Task ShouldCrateUserWithIdNullUsingUserManager()
+        {
+            var scope = InitializeServices();
+            var manager = scope.UserManager;
+            RavenIdentityUser user = CreateTestUser(email: "foo@bar.com");
+            user.Id = null!;
+
+            user.Id.Should().BeNull();
+            IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
+            user.Id.Should().NotBeNull("RavenDb automatically assigned an ID.");
+
+            await AssertCompareExchangeKeyExistsAsync($"identusern/{user.NormalizedUserName}", "user was created");
+            await AssertCompareExchangeKeyDoesNotExistAsync(
+                $"identemail/{user.NormalizedEmail}",
+                "unique email is not required"
+            );
+
+            WaitForUserToContinueTheTest(scope.DocumentStore);
+        }
+
+        [Fact]
+        public async Task ShouldCrateUserWithIdEmptyStringUsingUserManager()
+        {
+            var scope = InitializeServices();
+            var manager = scope.UserManager;
+            RavenIdentityUser user = CreateTestUser(email: "foo@bar.com");
+            user.Id = string.Empty;
+
+            user.Id.Should().BeEmpty();
+            IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
+            user.Id.Should().NotBeNull("RavenDb automatically assigned an ID.");
 
             await AssertCompareExchangeKeyExistsAsync($"identusern/{user.NormalizedUserName}", "user was created");
             await AssertCompareExchangeKeyDoesNotExistAsync(

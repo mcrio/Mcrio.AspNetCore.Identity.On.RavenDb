@@ -22,7 +22,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         public async Task RoleStoreMethodsThrowWhenDisposedTest()
         {
             var store = new RavenRoleStore(
-                new Mock<IAsyncDocumentSession>().Object,
+                () => new Mock<IAsyncDocumentSession>().Object,
                 new IdentityErrorDescriber(),
                 new Mock<ILogger<RavenRoleStore>>().Object
             );
@@ -55,16 +55,15 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         public async Task RoleStorePublicNullCheckTest()
         {
             var loggerMock = new Mock<ILogger<RavenRoleStore>>().Object;
-            Assert.Throws<ArgumentNullException>(
-                "documentSession",
+            Assert.Throws<NullReferenceException>(
                 () => new RavenRoleStore(null!, new IdentityErrorDescriber(), loggerMock)
             );
             Assert.Throws<ArgumentNullException>(
                 "errorDescriber",
-                () => new RavenRoleStore(new Mock<IAsyncDocumentSession>().Object, null!, loggerMock)
+                () => new RavenRoleStore(() => new Mock<IAsyncDocumentSession>().Object, null!, loggerMock)
             );
             var store = new RavenRoleStore(
-                new Mock<IAsyncDocumentSession>().Object,
+                () => new Mock<IAsyncDocumentSession>().Object,
                 new IdentityErrorDescriber(),
                 loggerMock
             );
@@ -104,6 +103,40 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             var role = CreateTestRole();
             IdentityResultAssert.IsSuccess(await manager.CreateAsync(role));
             await AssertCompareExchangeKeyExistsAsync($"identrole/{role.NormalizedName}");
+        }
+
+        [Fact]
+        public async Task ShouldCreateRoleWithIsAsNullUsingManager()
+        {
+            var scope = InitializeServices();
+            var manager = scope.RoleManager;
+
+            Assert.NotNull(manager);
+
+            var role = CreateTestRole();
+            role.Id = null!;
+            role.Id.Should().BeNull();
+            IdentityResultAssert.IsSuccess(await manager.CreateAsync(role));
+            role.Id.Should().NotBeNull("RavenDb automatically assigned an ID.");
+            await AssertCompareExchangeKeyExistsAsync($"identrole/{role.NormalizedName}");
+            WaitForUserToContinueTheTest(scope.DocumentStore);
+        }
+
+        [Fact]
+        public async Task ShouldCreateRoleWithIsAsEmptyStringUsingManager()
+        {
+            var scope = InitializeServices();
+            var manager = scope.RoleManager;
+
+            Assert.NotNull(manager);
+
+            var role = CreateTestRole();
+            role.Id = string.Empty;
+            role.Id.Should().BeEmpty();
+            IdentityResultAssert.IsSuccess(await manager.CreateAsync(role));
+            role.Id.Should().NotBeNull("RavenDb automatically assigned an ID.");
+            await AssertCompareExchangeKeyExistsAsync($"identrole/{role.NormalizedName}");
+            WaitForUserToContinueTheTest(scope.DocumentStore);
         }
 
         [Fact]

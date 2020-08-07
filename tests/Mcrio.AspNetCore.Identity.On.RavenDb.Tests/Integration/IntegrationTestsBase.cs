@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Model;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Raven.TestDriver;
@@ -23,6 +25,15 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
     {
         private IDocumentStore? _documentStore;
 
+        protected override void PreInitialize(IDocumentStore documentStore)
+        {
+            documentStore.Conventions.FindCollectionName = type =>
+            {
+                return IdentityRavenDbConventions.GetIdentityCollectionName<RavenIdentityUser, RavenIdentityRole>(type)
+                       ?? DocumentConventions.DefaultGetCollectionName(type);
+            };
+        }
+
         protected ServiceScope InitializeServices(
             bool requireUniqueEmail = false,
             bool protectPersonalData = false
@@ -32,38 +43,24 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
             var serviceCollection = new ServiceCollection();
 
-            serviceCollection.AddHttpContextAccessor();
-            serviceCollection.AddLogging();
-            serviceCollection.AddDataProtection();
-            serviceCollection.AddIdentity<TUser, TRole>(options =>
-            {
-                options.Password.RequireDigit = false;
-                options.Password.RequireLowercase = false;
-                options.Password.RequireNonAlphanumeric = false;
-                options.Password.RequireUppercase = false;
-                options.User.RequireUniqueEmail = requireUniqueEmail;
-                options.Stores.ProtectPersonalData = protectPersonalData;
-            }).AddDefaultTokenProviders();
-
             serviceCollection.TryAddSingleton(provider =>
                 _documentStore.OpenAsyncSession()
             );
 
-            serviceCollection.TryAddSingleton<IUserStore<RavenIdentityUser>>(
-                provider => new RavenUserStore(
-                    provider.GetRequiredService<IAsyncDocumentSession>(),
-                    new IdentityErrorDescriber(),
-                    provider.GetRequiredService<IOptions<IdentityOptions>>(),
-                    new Mock<ILogger<RavenUserStore>>().Object
-                )
-            );
-            serviceCollection.TryAddSingleton<IRoleStore<RavenIdentityRole>>(
-                provider => new RavenRoleStore(
-                    provider.GetRequiredService<IAsyncDocumentSession>(),
-                    new IdentityErrorDescriber(),
-                    new Mock<ILogger<RavenRoleStore>>().Object
-                )
-            );
+            serviceCollection.AddHttpContextAccessor();
+            serviceCollection.AddLogging();
+            serviceCollection.AddDataProtection();
+            serviceCollection.AddIdentity<TUser, TRole>(options =>
+                {
+                    options.Password.RequireDigit = false;
+                    options.Password.RequireLowercase = false;
+                    options.Password.RequireNonAlphanumeric = false;
+                    options.Password.RequireUppercase = false;
+                    options.User.RequireUniqueEmail = requireUniqueEmail;
+                    options.Stores.ProtectPersonalData = protectPersonalData;
+                })
+                .AddRavenDbStores(provider => provider.GetRequiredService<IAsyncDocumentSession>)
+                .AddDefaultTokenProviders();
 
             ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
 

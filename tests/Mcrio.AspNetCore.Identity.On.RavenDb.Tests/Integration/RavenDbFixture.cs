@@ -12,7 +12,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         {
             _documentStore = new Lazy<IDocumentStore>(CreateDocumentStore);
         }
-        
+
         public IDocumentStore DocumentStore => _documentStore.Value;
 
         private IDocumentStore CreateDocumentStore()
