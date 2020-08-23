@@ -2,14 +2,14 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model
 {
     public class PropertyChange<T>
     {
-        internal PropertyChange(T oldValue, T newValue)
+        internal PropertyChange(T oldPropertyValue, T newPropertyValue)
         {
-            OldValue = oldValue;
-            NewValue = newValue;
+            OldPropertyValue = oldPropertyValue;
+            NewPropertyValue = newPropertyValue;
         }
 
-        internal T OldValue { get; }
+        internal T OldPropertyValue { get; }
 
-        internal T NewValue { get; }
+        internal T NewPropertyValue { get; }
     }
 }

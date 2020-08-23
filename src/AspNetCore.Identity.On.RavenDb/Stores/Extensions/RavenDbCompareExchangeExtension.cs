@@ -46,19 +46,19 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions
         /// </summary>
         /// <param name="documentSession">Document session.</param>
         /// <param name="reservationType">Reservation type.</param>
-        /// <param name="expectedUniqueValue">Unique value requested for given reservation type.</param>
+        /// <param name="expectedCompareExchangeUniqueValue">Compare exchange unique value requested for given reservation type.</param>
         /// <param name="data">Custom data to be stored.</param>
         /// <typeparam name="TValue">Type of data to be stored.</typeparam>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
         internal static Task<bool> CreateReservationAsync<TValue>(
             this IAsyncDocumentSession documentSession,
             ReservationType reservationType,
-            string expectedUniqueValue,
+            string expectedCompareExchangeUniqueValue,
             TValue data = default)
         {
             return CreateReservationAsync(
                 documentSession,
-                PrepareCompareExchangeKey(GetPrefix(reservationType), expectedUniqueValue),
+                PrepareCompareExchangeKey(GetPrefix(reservationType), expectedCompareExchangeUniqueValue),
                 data
             );
         }

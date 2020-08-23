@@ -25,10 +25,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample
         public void ConfigureServices(IServiceCollection services)
         {
             // Register document store
+            string databaseName = Configuration.GetSection("RavenDbDatabase").Get<string>();
             IDocumentStore store = new DocumentStore
             {
                 Urls = Configuration.GetSection("RavenDbUrls").Get<string[]>(),
-                Database = Configuration.GetSection("RavenDbDatabase").Get<string>(),
+                Database = databaseName,
             };
             store.Conventions.FindCollectionName = type =>
             {
@@ -42,6 +43,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample
                 return DocumentConventions.DefaultGetCollectionName(type);
             };
             store.Initialize();
+            store.EnsureDatabaseExists(databaseName, true);
+
             services.AddSingleton(store);
 
             // Register scoped document session

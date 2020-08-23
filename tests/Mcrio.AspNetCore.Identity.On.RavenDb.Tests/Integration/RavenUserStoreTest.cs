@@ -4,7 +4,6 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Mcrio.AspNetCore.Identity.On.RavenDb.Model;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
@@ -296,7 +295,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await InitializeServices().UserManager.FindByNameAsync(user.UserName)).Should().NotBeNull();
             (await InitializeServices().UserManager.FindByIdAsync(user.Id)).Should().NotBeNull();
 
-            await AssertCompareExchangeKeyExistsAsync($"identity/username/{user.NormalizedUserName}", "user was created");
+            await AssertCompareExchangeKeyExistsAsync($"identity/username/{user.NormalizedUserName}",
+                "user was created");
             await AssertCompareExchangeKeyDoesNotExistAsync(
                 $"identity/email/{user.NormalizedEmail}",
                 "unique email is not required"
@@ -317,7 +317,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
             user.Id.Should().NotBeNull("RavenDb automatically assigned an ID.");
 
-            await AssertCompareExchangeKeyExistsAsync($"identity/username/{user.NormalizedUserName}", "user was created");
+            await AssertCompareExchangeKeyExistsAsync($"identity/username/{user.NormalizedUserName}",
+                "user was created");
             await AssertCompareExchangeKeyDoesNotExistAsync(
                 $"identity/email/{user.NormalizedEmail}",
                 "unique email is not required"
@@ -338,7 +339,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
             user.Id.Should().NotBeNull("RavenDb automatically assigned an ID.");
 
-            await AssertCompareExchangeKeyExistsAsync($"identity/username/{user.NormalizedUserName}", "user was created");
+            await AssertCompareExchangeKeyExistsAsync($"identity/username/{user.NormalizedUserName}",
+                "user was created");
             await AssertCompareExchangeKeyDoesNotExistAsync(
                 $"identity/email/{user.NormalizedEmail}",
                 "unique email is not required"

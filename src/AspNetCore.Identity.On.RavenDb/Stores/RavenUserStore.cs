@@ -81,7 +81,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         where TUserLogin : RavenIdentityUserLogin
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenUserStore{TUser, TRole, TKey}"/> class.
+        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TKey,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim,TAspUserClaim,TAspUserRole,TAspUserLogin,TAspUserToken,TAspRoleClaim}"/> class.
         /// </summary>
         /// <param name="documentSession">Document session.</param>
         /// <param name="describer">Error describer.</param>
@@ -205,7 +205,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             // Reserve username
             bool usernameReservationResult = await DocumentSession.CreateReservationAsync<string>(
                 RavenDbCompareExchangeExtension.ReservationType.Username,
-                user.NormalizedUserName
+                UsernameCompareExchangeUniqueValueModifier(user, user.NormalizedUserName)
             ).ConfigureAwait(false);
             if (!usernameReservationResult)
             {
@@ -223,13 +223,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
                 emailReservationResult = await DocumentSession.CreateReservationAsync<string>(
                     RavenDbCompareExchangeExtension.ReservationType.Email,
-                    user.NormalizedEmail
+                    EmailCompareExchangeUniqueValueModifier(user, user.NormalizedEmail)
                 ).ConfigureAwait(false);
                 if (!emailReservationResult)
                 {
                     bool removeResult = await DocumentSession.RemoveReservationAsync(
                         RavenDbCompareExchangeExtension.ReservationType.Username,
-                        user.NormalizedUserName
+                        UsernameCompareExchangeUniqueValueModifier(user, user.NormalizedUserName)
                     ).ConfigureAwait(false);
                     if (!removeResult)
                     {
@@ -268,7 +268,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                     // remove username reservations
                     bool removeUsernameCmpE = await DocumentSession.RemoveReservationAsync(
                         RavenDbCompareExchangeExtension.ReservationType.Username,
-                        user.NormalizedUserName
+                        UsernameCompareExchangeUniqueValueModifier(user, user.NormalizedUserName)
                     ).ConfigureAwait(false);
                     if (!removeUsernameCmpE)
                     {
@@ -282,7 +282,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                         // remove email reservations
                         bool removeEmailCmpE = await DocumentSession.RemoveReservationAsync(
                             RavenDbCompareExchangeExtension.ReservationType.Email,
-                            user.NormalizedEmail!
+                            EmailCompareExchangeUniqueValueModifier(user, user.NormalizedEmail!)
                         ).ConfigureAwait(false);
                         if (!removeEmailCmpE)
                         {
@@ -318,7 +318,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             // if email has changed and if we require unique emails
             PropertyChange<string>? normalizedEmailChange = null;
 
-            var changeVector = DocumentSession.Advanced.GetChangeVectorFor(user);
+            string? changeVector = DocumentSession.Advanced.GetChangeVectorFor(user);
 
             var saveSuccess = false;
             try
@@ -359,9 +359,12 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             {
                 if (normalizedUsernameChange != null)
                 {
-                    var usernameReservationToRemove = saveSuccess
-                        ? normalizedUsernameChange.OldValue
-                        : normalizedUsernameChange.NewValue;
+                    string usernameReservationToRemove = UsernameCompareExchangeUniqueValueModifier(
+                        user,
+                        saveSuccess
+                            ? normalizedUsernameChange.OldPropertyValue
+                            : normalizedUsernameChange.NewPropertyValue
+                    );
                     bool removeResult = await DocumentSession.RemoveReservationAsync(
                         RavenDbCompareExchangeExtension.ReservationType.Username,
                         usernameReservationToRemove
@@ -376,9 +379,12 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
                 if (normalizedEmailChange != null)
                 {
-                    var emailReservationToRemove = saveSuccess
-                        ? normalizedEmailChange.OldValue
-                        : normalizedEmailChange.NewValue;
+                    string emailReservationToRemove = EmailCompareExchangeUniqueValueModifier(
+                        user,
+                        saveSuccess
+                            ? normalizedEmailChange.OldPropertyValue
+                            : normalizedEmailChange.NewPropertyValue
+                    );
                     bool removeResult = await DocumentSession.RemoveReservationAsync(
                         RavenDbCompareExchangeExtension.ReservationType.Email,
                         emailReservationToRemove
@@ -417,7 +423,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 throw new Exception("User is expected to be already loaded in the RavenDB session.");
             }
 
-            var changeVector = DocumentSession.Advanced.GetChangeVectorFor(user);
+            string? changeVector = DocumentSession.Advanced.GetChangeVectorFor(user);
 
             var saveSuccess = false;
             try
@@ -442,7 +448,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                     // remove username reservations
                     bool removeUsernameCmpE = await DocumentSession.RemoveReservationAsync(
                         RavenDbCompareExchangeExtension.ReservationType.Username,
-                        user.NormalizedUserName
+                        UsernameCompareExchangeUniqueValueModifier(user, user.NormalizedUserName)
                     ).ConfigureAwait(false);
                     if (!removeUsernameCmpE)
                     {
@@ -456,7 +462,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                         // remove email reservations
                         bool removeEmailCmpE = await DocumentSession.RemoveReservationAsync(
                             RavenDbCompareExchangeExtension.ReservationType.Email,
-                            user.NormalizedEmail!
+                            EmailCompareExchangeUniqueValueModifier(user, user.NormalizedEmail!)
                         ).ConfigureAwait(false);
                         if (!removeEmailCmpE)
                         {
@@ -656,7 +662,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             bool loginReservation = await DocumentSession.CreateReservationAsync(
                 RavenDbCompareExchangeExtension.ReservationType.Login,
-                GetLoginReservationUniqueValue(userLogin.LoginProvider, userLogin.ProviderKey),
+                ExternalLoginCompareExchangeUniqueValueModifier(
+                    user,
+                    CreateLoginReservationUniqueValue(userLogin.LoginProvider, userLogin.ProviderKey)
+                ),
                 user.Id.ToString()
             ).ConfigureAwait(false);
 
@@ -697,9 +706,17 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 throw new Exception("User is expected to be already loaded in the RavenDB session.");
             }
 
-            var changeVector = DocumentSession.Advanced.GetChangeVectorFor(user);
+            string? changeVector = DocumentSession.Advanced.GetChangeVectorFor(user);
 
-            user.RemoveLogin(loginProvider, providerKey);
+            TUserLogin? userLogin = user.GetUserLogin(loginProvider, providerKey);
+            if (userLogin is null)
+            {
+                Logger.LogWarning(
+                    $"Error removing user login as not found in user object. User {user.Id} Provider {loginProvider} Key {providerKey}");
+                return;
+            }
+
+            user.RemoveLogin(userLogin);
 
             var saveSuccess = false;
             try
@@ -722,7 +739,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 {
                     bool removedLoginReservation = await DocumentSession.RemoveReservationAsync(
                         RavenDbCompareExchangeExtension.ReservationType.Login,
-                        GetLoginReservationUniqueValue(loginProvider, providerKey)
+                        ExternalLoginCompareExchangeUniqueValueModifier(
+                            user,
+                            CreateLoginReservationUniqueValue(loginProvider, providerKey)
+                        )
                     ).ConfigureAwait(false);
 
                     if (!removedLoginReservation)
@@ -804,7 +824,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            var role = await FindRoleAsync(normalizedRoleName, cancellationToken).ConfigureAwait(false);
+            TRole? role = await FindRoleAsync(normalizedRoleName, cancellationToken).ConfigureAwait(false);
             return role != null && user.HasRole(role.Id);
         }
 
@@ -827,10 +847,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 throw new InvalidOperationException($"Unknown role with normalized name {normalizedRoleName}");
             }
 
-            var query = DocumentSession.Query<TUser>()
+            IQueryable<TUser> query = DocumentSession.Query<TUser>()
                 .Where(item => item.Roles.Contains(role.Id));
 
-            var streamResult = await DocumentSession
+            Raven.Client.Util.IAsyncEnumerator<StreamResult<TUser>> streamResult = await DocumentSession
                 .Advanced
                 .StreamAsync(query, cancellationToken)
                 .ConfigureAwait(false);
@@ -982,6 +1002,54 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         protected abstract TUserLogin CreateUserLogin(UserLoginInfo loginInfo);
 
         /// <summary>
+        /// Optionally process the username unique value used in the compare exchange.
+        /// Can be used if extending service for multi tenant support.
+        /// </summary>
+        /// <param name="user">User object.</param>
+        /// <param name="uniqueValue">Unique value to modify.</param>
+        /// <returns>Final username unique value used in the compare exchange.</returns>
+        protected virtual string UsernameCompareExchangeUniqueValueModifier(TUser user, string uniqueValue)
+        {
+            return uniqueValue;
+        }
+
+        /// <summary>
+        /// Optionally modify the email unique value used in the compare exchange.
+        /// Can be used if extending service for multi tenant support.
+        /// </summary>
+        /// <param name="user">User object.</param>
+        /// <param name="uniqueValue">Unique value to modify.</param>
+        /// <returns>Final email unique value used in the compare exchange.</returns>
+        protected virtual string EmailCompareExchangeUniqueValueModifier(TUser user, string uniqueValue)
+        {
+            return uniqueValue;
+        }
+
+        /// <summary>
+        /// Optionally modify the external login unique value used in the compare exchange.
+        /// Can be used if extending service for multi tenant support.
+        /// </summary>
+        /// <param name="user">User object.</param>
+        /// <param name="uniqueValue">Unique value to modify.</param>
+        /// <returns>Final external login unique value used in the compare exchange.</returns>
+        protected virtual string ExternalLoginCompareExchangeUniqueValueModifier(TUser user, string uniqueValue)
+        {
+            return uniqueValue;
+        }
+
+        /// <summary>
+        /// Optionally modify the unique value used in compare exchange key when searching for
+        /// external login.
+        /// Can be used if extending service for multi tenant support.
+        /// </summary>
+        /// <param name="uniqueValue">Unique value to modify.</param>
+        /// <returns>Final unique value to search for external login with compare exchange.</returns>
+        protected virtual string ExternalLoginCompareExchangeUniqueValueModifier(string uniqueValue)
+        {
+            return uniqueValue;
+        }
+
+        /// <summary>
         /// Find user token by given parameters.
         /// </summary>
         /// <param name="user">User.</param>
@@ -1097,20 +1165,17 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            var user = await DocumentSession.LoadAsync<TUser>(userId.ToString(), cancellationToken);
-            if (user != null)
+            TUser? user = await DocumentSession.LoadAsync<TUser>(userId.ToString(), cancellationToken);
+            TUserLogin? userLogin = user?.GetUserLogin(loginProvider, providerKey);
+            if (userLogin != null)
             {
-                TUserLogin? userLogin = user.GetUserLogin(loginProvider, providerKey)!;
-                if (userLogin != null)
+                return new TAspUserLogin
                 {
-                    return new TAspUserLogin
-                    {
-                        UserId = user.Id,
-                        LoginProvider = userLogin.LoginProvider,
-                        ProviderKey = userLogin.ProviderKey,
-                        ProviderDisplayName = userLogin.ProviderDisplayName,
-                    };
-                }
+                    UserId = user!.Id,
+                    LoginProvider = userLogin.LoginProvider,
+                    ProviderKey = userLogin.ProviderKey,
+                    ProviderDisplayName = userLogin.ProviderDisplayName,
+                };
             }
 
             return null!;
@@ -1142,7 +1207,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             CompareExchangeValue<string>? reservationValue = await DocumentSession.GetReservationAsync<string>(
                 RavenDbCompareExchangeExtension.ReservationType.Login,
-                GetLoginReservationUniqueValue(loginProvider, providerKey)
+                ExternalLoginCompareExchangeUniqueValueModifier(
+                    CreateLoginReservationUniqueValue(loginProvider, providerKey)
+                )
             ).ConfigureAwait(false);
 
             if (reservationValue is null)
@@ -1151,7 +1218,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             }
 
             string userId = reservationValue.Value;
-            var user = await DocumentSession.LoadAsync<TUser>(userId, cancellationToken).ConfigureAwait(false);
+            TUser? user = await DocumentSession.LoadAsync<TUser>(userId, cancellationToken).ConfigureAwait(false);
 
             if (user is null)
             {
@@ -1236,19 +1303,22 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         {
             RavenDbCompareExchangeExtension.ReservationType cmpExchangeReservationType;
             string changedPropertyName;
-            string newUniqueValue;
+            string newPropertyValue;
+            string newCompareExchangeUniqueValue;
 
             switch (changeType)
             {
                 case UniqueUserPropertyChangeType.Username:
                     cmpExchangeReservationType = RavenDbCompareExchangeExtension.ReservationType.Username;
                     changedPropertyName = nameof(user.NormalizedUserName);
-                    newUniqueValue = user.NormalizedUserName;
+                    newPropertyValue = user.NormalizedUserName;
+                    newCompareExchangeUniqueValue = UsernameCompareExchangeUniqueValueModifier(user, newPropertyValue);
                     break;
                 case UniqueUserPropertyChangeType.Email:
                     cmpExchangeReservationType = RavenDbCompareExchangeExtension.ReservationType.Email;
                     changedPropertyName = nameof(user.NormalizedEmail);
-                    newUniqueValue = user.NormalizedEmail;
+                    newPropertyValue = user.NormalizedEmail;
+                    newCompareExchangeUniqueValue = EmailCompareExchangeUniqueValueModifier(user, newPropertyValue);
                     break;
                 default:
                     throw new Exception($"Unknown unique user property change type {changeType}");
@@ -1257,12 +1327,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             return DocumentSession.ReserveIfPropertyChangedAsync(
                 user.Id.ToString(),
                 changedPropertyName,
-                newUniqueValue,
+                newPropertyValue,
+                newCompareExchangeUniqueValue,
                 cmpExchangeReservationType
             );
         }
 
-        private static string GetLoginReservationUniqueValue(string loginProvider, string providerKey)
+        private static string CreateLoginReservationUniqueValue(string loginProvider, string providerKey)
         {
             return $"{loginProvider}/{providerKey}";
         }

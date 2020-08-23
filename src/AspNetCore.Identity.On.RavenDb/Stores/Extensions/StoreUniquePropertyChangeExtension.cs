@@ -19,7 +19,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions
         /// <param name="documentSession">Document session.</param>
         /// <param name="entityId">Entity id.</param>
         /// <param name="changedPropertyName">Name of property we are checking the change for.</param>
-        /// <param name="newUniqueValue">New unique value we want to reserve.</param>
+        /// <param name="newPropertyValue">Expected new value for changed property.</param>
+        /// <param name="newCompareExchangeUniqueValue">New unique value we want to reserve.</param>
         /// <param name="cmpExchangeReservationType">Compare exchange reservation type.</param>
         /// <returns>Optional property change data if there was a property change and
         /// a successful new compare exchange reservation made.</returns>
@@ -28,7 +29,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions
             this IAsyncDocumentSession documentSession,
             string entityId,
             string changedPropertyName,
-            string newUniqueValue,
+            string newPropertyValue,
+            string newCompareExchangeUniqueValue,
             RavenDbCompareExchangeExtension.ReservationType cmpExchangeReservationType)
         {
             IDictionary<string, DocumentsChanges[]> whatChanged = documentSession.Advanced.WhatChanged();
@@ -41,27 +43,29 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions
                     );
                 if (change != null)
                 {
-                    if (newUniqueValue != change.FieldNewValue.ToString())
+                    if (newPropertyValue != change.FieldNewValue.ToString())
                     {
-                        throw new Exception(
-                            $"User updated {changedPropertyName} property '{newUniqueValue}' should match change "
+                        throw new InvalidOperationException(
+                            $"User updated {changedPropertyName} property '{newPropertyValue}' should match change "
                             + $"trackers recorded new value '{change.FieldNewValue}'"
                         );
                     }
 
-                    bool reservedNewValue = await documentSession
+                    bool reserved = await documentSession
                         .CreateReservationAsync<string>(
                             cmpExchangeReservationType,
-                            newUniqueValue
+                            newCompareExchangeUniqueValue
                         ).ConfigureAwait(false);
-                    if (!reservedNewValue)
+                    if (!reserved)
                     {
-                        throw new UniqueValueExistsException($"Unique value {newUniqueValue} already exists.");
+                        throw new UniqueValueExistsException(
+                            $"Compare exchange unique value {newCompareExchangeUniqueValue} already exists."
+                        );
                     }
 
                     return new PropertyChange<string>(
                         change.FieldOldValue.ToString(),
-                        newUniqueValue
+                        newPropertyValue
                     );
                 }
             }
