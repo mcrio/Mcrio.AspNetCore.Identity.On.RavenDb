@@ -7,6 +7,7 @@ using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -102,7 +103,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
             var role = CreateTestRole();
             IdentityResultAssert.IsSuccess(await manager.CreateAsync(role));
-            await AssertCompareExchangeKeyExistsAsync($"identrole/{role.NormalizedName}");
+            await AssertCompareExchangeKeyExistsAsync($"identity/role/{role.NormalizedName}");
         }
 
         [Fact]
@@ -118,7 +119,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             role.Id.Should().BeNull();
             IdentityResultAssert.IsSuccess(await manager.CreateAsync(role));
             role.Id.Should().NotBeNull("RavenDb automatically assigned an ID.");
-            await AssertCompareExchangeKeyExistsAsync($"identrole/{role.NormalizedName}");
+            await AssertCompareExchangeKeyExistsAsync($"identity/role/{role.NormalizedName}");
             WaitForUserToContinueTheTest(scope.DocumentStore);
         }
 
@@ -135,7 +136,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             role.Id.Should().BeEmpty();
             IdentityResultAssert.IsSuccess(await manager.CreateAsync(role));
             role.Id.Should().NotBeNull("RavenDb automatically assigned an ID.");
-            await AssertCompareExchangeKeyExistsAsync($"identrole/{role.NormalizedName}");
+            await AssertCompareExchangeKeyExistsAsync($"identity/role/{role.NormalizedName}");
             WaitForUserToContinueTheTest(scope.DocumentStore);
         }
 
@@ -151,7 +152,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
                 (await manager.CreateAsync(role)).Succeeded.Should().BeTrue();
                 WaitForIndexing(scope.DocumentStore);
-                await AssertCompareExchangeKeyExistsAsync($"identrole/{role.NormalizedName}");
+                await AssertCompareExchangeKeyExistsAsync($"identity/role/{role.NormalizedName}");
             }
 
             {
@@ -161,8 +162,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 (await manager2.SetRoleNameAsync(role, "updatedName")).Succeeded.Should().BeTrue();
                 (await manager2.UpdateAsync(role)).Succeeded.Should().BeTrue();
                 WaitForIndexing(scope.DocumentStore);
-                await AssertCompareExchangeKeyExistsAsync("identrole/updatedName");
-                await AssertCompareExchangeKeyDoesNotExistAsync("identrole/initialName");
+                await AssertCompareExchangeKeyExistsAsync("identity/role/updatedName");
+                await AssertCompareExchangeKeyDoesNotExistAsync("identity/role/initialName");
             }
 
             {
@@ -188,8 +189,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await manager.CreateAsync(role2)).Succeeded.Should().BeTrue();
             WaitForIndexing(scope.DocumentStore);
 
-            await AssertCompareExchangeKeyExistsAsync("identrole/role");
-            await AssertCompareExchangeKeyExistsAsync("identrole/role2");
+            await AssertCompareExchangeKeyExistsAsync("identity/role/role");
+            await AssertCompareExchangeKeyExistsAsync("identity/role/role2");
 
             (await manager.FindByNameAsync("role")).Should().NotBeNull();
             (await manager.FindByNameAsync("role2")).Should().NotBeNull();
@@ -197,8 +198,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await manager.SetRoleNameAsync(role, "role2")).Succeeded.Should().BeTrue();
             (await manager.UpdateAsync(role)).Succeeded.Should().BeFalse();
 
-            await AssertCompareExchangeKeyExistsAsync("identrole/role");
-            await AssertCompareExchangeKeyExistsAsync("identrole/role2");
+            await AssertCompareExchangeKeyExistsAsync("identity/role/role");
+            await AssertCompareExchangeKeyExistsAsync("identity/role/role2");
         }
 
         /// <summary>

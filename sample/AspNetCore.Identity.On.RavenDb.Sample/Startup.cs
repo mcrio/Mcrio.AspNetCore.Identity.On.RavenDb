@@ -1,6 +1,5 @@
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
-using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -33,9 +32,14 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample
             };
             store.Conventions.FindCollectionName = type =>
             {
-                return IdentityRavenDbConventions
-                           .GetIdentityCollectionName<RavenIdentityUser, RavenIdentityRole>(type)
-                       ?? DocumentConventions.DefaultGetCollectionName(type);
+                if (IdentityRavenDbConventions.TryGetCollectionName<RavenIdentityUser, RavenIdentityRole>(
+                    type,
+                    out string? collectionName))
+                {
+                    return collectionName;
+                }
+
+                return DocumentConventions.DefaultGetCollectionName(type);
             };
             store.Initialize();
             services.AddSingleton(store);

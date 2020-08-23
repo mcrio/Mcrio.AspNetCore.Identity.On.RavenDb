@@ -1,16 +1,11 @@
-using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Mcrio.AspNetCore.Identity.On.RavenDb.Model;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Moq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.CompareExchange;
@@ -29,8 +24,14 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         {
             documentStore.Conventions.FindCollectionName = type =>
             {
-                return IdentityRavenDbConventions.GetIdentityCollectionName<RavenIdentityUser, RavenIdentityRole>(type)
-                       ?? DocumentConventions.DefaultGetCollectionName(type);
+                if (IdentityRavenDbConventions.TryGetCollectionName<RavenIdentityUser, RavenIdentityRole>(
+                    type,
+                    out string? collectionName))
+                {
+                    return collectionName;
+                }
+
+                return DocumentConventions.DefaultGetCollectionName(type);
             };
         }
 
