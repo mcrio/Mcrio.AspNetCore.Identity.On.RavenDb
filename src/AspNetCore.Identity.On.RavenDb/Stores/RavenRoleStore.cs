@@ -26,18 +26,18 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenRoleStore"/> class.
         /// </summary>
-        /// <param name="documentSessionProvider">Document session provider.</param>
+        /// <param name="identityDocumentSessionProvider">Document session provider.</param>
         /// <param name="errorDescriber">Error describer.</param>
         /// <param name="logger">Logger.</param>
         public RavenRoleStore(
-            DocumentSessionProvider documentSessionProvider,
+            IdentityDocumentSessionProvider identityDocumentSessionProvider,
             IdentityErrorDescriber errorDescriber,
             ILogger<RavenRoleStore> logger)
-            : base(documentSessionProvider(), errorDescriber, logger)
+            : base(identityDocumentSessionProvider(), errorDescriber, logger)
         {
-            if (documentSessionProvider == null)
+            if (identityDocumentSessionProvider == null)
             {
-                throw new ArgumentNullException(nameof(documentSessionProvider));
+                throw new ArgumentNullException(nameof(identityDocumentSessionProvider));
             }
         }
 

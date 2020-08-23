@@ -11,22 +11,28 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb
         /// If type is a implemented RavenDB identity type, returns a default collection name.
         /// </summary>
         /// <param name="type">Object type to get the collection for.</param>
+        /// <param name="collectionName">Collection name found.</param>
         /// <typeparam name="TUser">Identity user type.</typeparam>
         /// <typeparam name="TRole">Identity role type.</typeparam>
         /// <returns>Default collection name if known type otherwise Null.</returns>
-        public static string? GetIdentityCollectionName<TUser, TRole>(Type type)
+        public static bool TryGetCollectionName<TUser, TRole>(
+            Type type,
+            out string? collectionName)
         {
             if (typeof(TUser).IsAssignableFrom(type))
             {
-                return "Users";
+                collectionName = "Users";
+                return true;
             }
 
             if (typeof(TRole).IsAssignableFrom(type))
             {
-                return "Roles";
+                collectionName = "Roles";
+                return true;
             }
 
-            return null;
+            collectionName = null;
+            return false;
         }
     }
 }

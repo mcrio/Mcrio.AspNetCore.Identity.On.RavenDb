@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
@@ -26,16 +27,16 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenUserStore"/> class.
         /// </summary>
-        /// <param name="documentSessionProvider">Document session provider.</param>
+        /// <param name="identityDocumentSessionProvider">Document session provider.</param>
         /// <param name="describer">Error describer.</param>
         /// <param name="optionsAccessor">Identity options accessor.</param>
         /// <param name="logger">Logger.</param>
         public RavenUserStore(
-            DocumentSessionProvider documentSessionProvider,
+            IdentityDocumentSessionProvider identityDocumentSessionProvider,
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
             ILogger<RavenUserStore> logger)
-            : base(documentSessionProvider(), describer, optionsAccessor, logger)
+            : base(identityDocumentSessionProvider(), describer, optionsAccessor, logger)
         {
         }
 
@@ -606,12 +607,21 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            // note: AspNet Core by default does not implement pagination!!! let's set return count to 1000.
-            return await DocumentSession.Query<TUser>()
-                .Where(user => user.Claims.Any(item => item.Type == claim.Type && item.Value == claim.Value))
-                .Take(1000)
-                .ToListAsync(cancellationToken)
+            IQueryable<TUser> query = DocumentSession.Query<TUser>()
+                .Where(user => user.Claims.Any(item => item.Type == claim.Type && item.Value == claim.Value));
+
+            Raven.Client.Util.IAsyncEnumerator<StreamResult<TUser>> streamResult = await DocumentSession
+                .Advanced
+                .StreamAsync(query, cancellationToken)
                 .ConfigureAwait(false);
+
+            var users = new List<TUser>();
+            while (await streamResult.MoveNextAsync().ConfigureAwait(false))
+            {
+                users.Add(streamResult.Current.Document);
+            }
+
+            return users;
         }
 
         /// <summary>
@@ -817,11 +827,21 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 throw new InvalidOperationException($"Unknown role with normalized name {normalizedRoleName}");
             }
 
-            // note: AspNet Core by default does not implement pagination!!! let's set return count to 1000
-            return await DocumentSession.Query<TUser>()
-                .Where(item => item.Roles.Contains(role.Id))
-                .Take(1000)
-                .ToListAsync(cancellationToken);
+            var query = DocumentSession.Query<TUser>()
+                .Where(item => item.Roles.Contains(role.Id));
+
+            var streamResult = await DocumentSession
+                .Advanced
+                .StreamAsync(query, cancellationToken)
+                .ConfigureAwait(false);
+
+            var users = new List<TUser>();
+            while (await streamResult.MoveNextAsync().ConfigureAwait(false))
+            {
+                users.Add(streamResult.Current.Document);
+            }
+
+            return users;
         }
 
         /// <inheritdoc/>

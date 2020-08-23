@@ -10,10 +10,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions
     /// </summary>
     internal static class RavenDbCompareExchangeExtension
     {
-        private const string IdentityRoleCompareExchangePrefix = "identrole";
-        private const string IdentityUserNameCompareExchangePrefix = "identusern";
-        private const string IdentityEmailCompareExchangePrefix = "identemail";
-        private const string IdentityUserLoginCompareExchangePrefix = "identlogin";
+        private const string IdentityRoleCompareExchangePrefix = "identity/role";
+        private const string IdentityUserNameCompareExchangePrefix = "identity/username";
+        private const string IdentityEmailCompareExchangePrefix = "identity/email";
+        private const string IdentityUserLoginCompareExchangePrefix = "identity/login";
 
         /// <summary>
         /// Represents different compare exchange reservation types.
@@ -48,6 +48,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions
         /// <param name="reservationType">Reservation type.</param>
         /// <param name="expectedUniqueValue">Unique value requested for given reservation type.</param>
         /// <param name="data">Custom data to be stored.</param>
+        /// <typeparam name="TValue">Type of data to be stored.</typeparam>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
         internal static Task<bool> CreateReservationAsync<TValue>(
             this IAsyncDocumentSession documentSession,

@@ -12,7 +12,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb
     /// Delegate which provides a <see cref="IAsyncDocumentSession"/> to be used as a RavenDB document session.
     /// </summary>
     /// <returns>RavenDB async document session.</returns>
-    public delegate IAsyncDocumentSession DocumentSessionProvider();
+    public delegate IAsyncDocumentSession IdentityDocumentSessionProvider();
 
     /// <summary>
     /// Extension methods to <see cref="IdentityBuilder"/> for adding RavenDB stores.
@@ -27,7 +27,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb
         /// <returns>The <see cref="IdentityBuilder"/> instance this method extends.</returns>
         public static IdentityBuilder AddRavenDbStores(
             this IdentityBuilder builder,
-            Func<IServiceProvider, DocumentSessionProvider> documentSessionProvider)
+            Func<IServiceProvider, IdentityDocumentSessionProvider> documentSessionProvider)
         {
             if (documentSessionProvider == null)
             {
@@ -39,7 +39,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb
             builder.Services.TryAddScoped<IUserStore<RavenIdentityUser>, RavenUserStore>();
             builder.Services.TryAddScoped<IRoleStore<RavenIdentityRole>, RavenRoleStore>();
 
-            builder.Services.TryAddScoped<DocumentSessionProvider>(documentSessionProvider);
+            builder.Services.TryAddScoped<IdentityDocumentSessionProvider>(documentSessionProvider);
 
             return builder;
         }
