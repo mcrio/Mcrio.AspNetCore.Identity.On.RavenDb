@@ -7,7 +7,6 @@ using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
-using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -22,10 +21,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         [Fact]
         public async Task RoleStoreMethodsThrowWhenDisposedTest()
         {
-            var store = new RavenRoleStore(
+            var store = new RavenRoleStore<RavenIdentityRole, RavenIdentityUser>(
                 () => new Mock<IAsyncDocumentSession>().Object,
                 new IdentityErrorDescriber(),
-                new Mock<ILogger<RavenRoleStore>>().Object
+                new Mock<ILogger<RavenRoleStore<RavenIdentityRole, RavenIdentityUser>>>().Object
             );
             store.Dispose();
             await Assert.ThrowsAsync<ObjectDisposedException>(() => store.CreateAsync(CreateTestRole()));
@@ -55,15 +54,17 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         [Fact]
         public async Task RoleStorePublicNullCheckTest()
         {
-            var loggerMock = new Mock<ILogger<RavenRoleStore>>().Object;
+            var loggerMock = new Mock<ILogger<RavenRoleStore<RavenIdentityRole, RavenIdentityUser>>>().Object;
             Assert.Throws<NullReferenceException>(
-                () => new RavenRoleStore(null!, new IdentityErrorDescriber(), loggerMock)
+                () => new RavenRoleStore<RavenIdentityRole, RavenIdentityUser>(null!, new IdentityErrorDescriber(),
+                    loggerMock)
             );
             Assert.Throws<ArgumentNullException>(
                 "errorDescriber",
-                () => new RavenRoleStore(() => new Mock<IAsyncDocumentSession>().Object, null!, loggerMock)
+                () => new RavenRoleStore<RavenIdentityRole, RavenIdentityUser>(
+                    () => new Mock<IAsyncDocumentSession>().Object, null!, loggerMock)
             );
-            var store = new RavenRoleStore(
+            var store = new RavenRoleStore<RavenIdentityRole, RavenIdentityUser>(
                 () => new Mock<IAsyncDocumentSession>().Object,
                 new IdentityErrorDescriber(),
                 loggerMock

@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Identity;
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role
 {
     /// <summary>
-    /// class that represents the Identity Role.
+    /// Class that represents the Identity Role.
     /// </summary>
     public class RavenIdentityRole : RavenIdentityRole<string, RavenIdentityClaim>
     {

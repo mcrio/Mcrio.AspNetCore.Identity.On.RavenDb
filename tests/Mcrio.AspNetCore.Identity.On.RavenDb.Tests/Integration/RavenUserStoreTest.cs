@@ -23,11 +23,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         [Fact]
         public async Task UserStoreMethodsThrowWhenDisposedTest()
         {
-            RavenUserStore store = new RavenUserStore(
+            var store = new RavenUserStore<RavenIdentityUser, RavenIdentityRole>(
                 () => new Mock<IAsyncDocumentSession>().Object,
                 new IdentityErrorDescriber(),
                 Options.Create(new IdentityOptions()),
-                new Mock<ILogger<RavenUserStore>>().Object);
+                new Mock<ILogger<RavenUserStore<RavenIdentityUser, RavenIdentityRole>>>().Object);
 
             store.Dispose();
             await Assert.ThrowsAsync<ObjectDisposedException>(
@@ -86,11 +86,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         [Fact]
         public async Task UserStorePublicNullCheckTest()
         {
-            RavenUserStore store = new RavenUserStore(
+            var store = new RavenUserStore<RavenIdentityUser, RavenIdentityRole>(
                 () => new Mock<IAsyncDocumentSession>().Object,
                 new IdentityErrorDescriber(),
                 Options.Create(new IdentityOptions()),
-                new Mock<ILogger<RavenUserStore>>().Object
+                new Mock<ILogger<RavenUserStore<RavenIdentityUser, RavenIdentityRole>>>().Object
             );
             await Assert.ThrowsAsync<ArgumentNullException>(
                 "user",

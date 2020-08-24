@@ -14,8 +14,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             RoleManager<RavenIdentityRole> roleManager,
             UserManager<RavenIdentityUser> userManager,
             IDocumentStore documentStore,
-            RavenUserStore userStore,
-            RavenRoleStore roleStore,
+            RavenUserStore<RavenIdentityUser, RavenIdentityRole> userStore,
+            RavenRoleStore<RavenIdentityRole, RavenIdentityUser> roleStore,
             IAsyncDocumentSession documentSession)
         {
             RoleManager = roleManager;
@@ -32,9 +32,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
         internal IDocumentStore DocumentStore { get; }
 
-        internal RavenUserStore UserStore { get; }
+        internal RavenUserStore<RavenIdentityUser, RavenIdentityRole> UserStore { get; }
 
-        internal RavenRoleStore RoleStore { get; }
+        internal RavenRoleStore<RavenIdentityRole, RavenIdentityUser> RoleStore { get; }
 
         internal IAsyncDocumentSession DocumentSession { get; }
     }

@@ -21,11 +21,13 @@ using Raven.Client.Exceptions;
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 {
     /// <inheritdoc />
-    public class RavenUserStore : RavenUserStore<RavenIdentityUser, string, RavenIdentityClaim,
-        RavenIdentityToken, RavenIdentityUserLogin, RavenIdentityRole, RavenIdentityClaim>
+    public class RavenUserStore<TUser, TRole> : RavenUserStore<TUser, string, RavenIdentityClaim,
+        RavenIdentityToken, RavenIdentityUserLogin, TRole, RavenIdentityClaim>
+        where TUser : RavenIdentityUser
+        where TRole : RavenIdentityRole
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenUserStore"/> class.
+        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TRole}"/> class.
         /// </summary>
         /// <param name="identityDocumentSessionProvider">Document session provider.</param>
         /// <param name="describer">Error describer.</param>
@@ -35,7 +37,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             IdentityDocumentSessionProvider identityDocumentSessionProvider,
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
-            ILogger<RavenUserStore> logger)
+            ILogger<RavenUserStore<TUser, TRole>> logger)
             : base(identityDocumentSessionProvider(), describer, optionsAccessor, logger)
         {
         }
@@ -116,7 +118,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         where TAspRoleClaim : IdentityRoleClaim<TKey>, new()
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenUserStore"/> class.
+        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TKey,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim,TAspUserClaim,TAspUserRole,TAspUserLogin,TAspUserToken,TAspRoleClaim}"/> class.
         /// </summary>
         /// <param name="documentSession">Document session.</param>
         /// <param name="describer">Error describer.</param>

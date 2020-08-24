@@ -69,19 +69,19 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 serviceProvider.GetRequiredService<RoleManager<RavenIdentityRole>>(),
                 serviceProvider.GetRequiredService<UserManager<RavenIdentityUser>>(),
                 _documentStore,
-                (RavenUserStore)serviceProvider.GetRequiredService<IUserStore<RavenIdentityUser>>(),
-                (RavenRoleStore)serviceProvider.GetRequiredService<IRoleStore<RavenIdentityRole>>(),
+                (RavenUserStore<RavenIdentityUser, RavenIdentityRole>)serviceProvider
+                    .GetRequiredService<IUserStore<RavenIdentityUser>>(),
+                (RavenRoleStore<RavenIdentityRole, RavenIdentityUser>)serviceProvider
+                    .GetRequiredService<IRoleStore<RavenIdentityRole>>(),
                 serviceProvider.GetRequiredService<IAsyncDocumentSession>()
             );
         }
 
         protected async Task AssertCompareExchangeKeyExistsAsync(string cmpExchangeKey, string because = "")
         {
-            var documentStore = InitializeServices().DocumentStore;
+            IDocumentStore documentStore = InitializeServices().DocumentStore;
             CompareExchangeValue<string> result = await GetCompareExchangeAsync<string>(documentStore, cmpExchangeKey);
-            result.Should().NotBeNull(
-                because == null ? string.Empty : $"cmp exchange {cmpExchangeKey} should exist because {because}"
-            );
+            result.Should().NotBeNull($"cmp exchange {cmpExchangeKey} should exist because {because}");
         }
 
         protected async Task AssertCompareExchangeKeyExistsWithValueAsync<TValue>(
@@ -89,21 +89,17 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             TValue value,
             string because = "")
         {
-            var documentStore = InitializeServices().DocumentStore;
+            IDocumentStore documentStore = InitializeServices().DocumentStore;
             CompareExchangeValue<TValue> result = await GetCompareExchangeAsync<TValue>(documentStore, cmpExchangeKey);
-            result.Should().NotBeNull(
-                because == null ? string.Empty : $"cmp exchange {cmpExchangeKey} should exist because {because}"
-            );
+            result.Should().NotBeNull($"cmp exchange {cmpExchangeKey} should exist because {because}");
             result.Value.Should().Be(value);
         }
 
         protected async Task AssertCompareExchangeKeyDoesNotExistAsync(string cmpExchangeKey, string because = "")
         {
-            var documentStore = InitializeServices().DocumentStore;
+            IDocumentStore documentStore = InitializeServices().DocumentStore;
             CompareExchangeValue<string> result = await GetCompareExchangeAsync<string>(documentStore, cmpExchangeKey);
-            result.Should().BeNull(
-                because == null ? string.Empty : $"cmp exchange {cmpExchangeKey} should not exist because {because}"
-            );
+            result.Should().BeNull($"cmp exchange {cmpExchangeKey} should not exist because {because}");
         }
 
         private static Task<CompareExchangeValue<TValue>> GetCompareExchangeAsync<TValue>(
