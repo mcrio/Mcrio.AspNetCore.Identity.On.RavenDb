@@ -20,7 +20,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
     /// <summary>
     /// Class that represents the RavenDB implementation for the identity role store.
     /// </summary>
-    public sealed class RavenRoleStore : RavenRoleStore<RavenIdentityRole, string, RavenIdentityClaim,
+    public class RavenRoleStore : RavenRoleStore<RavenIdentityRole, string, RavenIdentityClaim,
         RavenIdentityUser, RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken>
     {
         /// <summary>

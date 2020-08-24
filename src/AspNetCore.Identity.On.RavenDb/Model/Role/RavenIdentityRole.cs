@@ -43,7 +43,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role
         /// </summary>
         /// <param name="id">Role id.</param>
         /// <param name="roleName">Role Name.</param>
-        public RavenIdentityRole(TKey id, string roleName)
+        protected RavenIdentityRole(TKey id, string roleName)
             : base(roleName)
         {
             Id = id;

@@ -21,7 +21,7 @@ using Raven.Client.Exceptions;
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 {
     /// <inheritdoc />
-    public sealed class RavenUserStore : RavenUserStore<RavenIdentityUser, string, RavenIdentityClaim,
+    public class RavenUserStore : RavenUserStore<RavenIdentityUser, string, RavenIdentityClaim,
         RavenIdentityToken, RavenIdentityUserLogin, RavenIdentityRole, RavenIdentityClaim>
     {
         /// <summary>

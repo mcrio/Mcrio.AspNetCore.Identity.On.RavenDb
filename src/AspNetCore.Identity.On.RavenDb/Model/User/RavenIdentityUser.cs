@@ -25,6 +25,17 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
         /// </summary>
+        /// <param name="id">User ID.</param>
+        /// <param name="username">Username.</param>
+        /// <param name="email">User email.</param>
+        public RavenIdentityUser(string id, string username, string email)
+            : base(id, username, email)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
+        /// </summary>
         public RavenIdentityUser()
         {
         }
@@ -50,30 +61,30 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         private List<TUserClaim> _claims = new List<TUserClaim>();
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
+        /// Initializes a new instance of the <see cref="RavenIdentityUser{TKey,TUserClaim,TUserLogin,TUserToken}"/> class.
         /// </summary>
         /// <param name="id">User identifier.</param>
         /// <param name="username">Username.</param>
-        public RavenIdentityUser(TKey id, string username)
+        protected RavenIdentityUser(TKey id, string username)
             : base(username)
         {
             Id = id;
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenIdentityUser{TKey}"/> class.
+        /// Initializes a new instance of the <see cref="RavenIdentityUser{TKey,TUserClaim,TUserLogin,TUserToken}"/> class.
         /// </summary>
         /// <param name="id">User identifier.</param>
         /// <param name="username">User's username.</param>
         /// <param name="email">User's email address.</param>
-        public RavenIdentityUser(TKey id, string username, string email)
+        protected RavenIdentityUser(TKey id, string username, string email)
             : this(id, username)
         {
             Email = email;
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenIdentityUser{TKey}"/> class.
+        /// Initializes a new instance of the <see cref="RavenIdentityUser{TKey,TUserClaim,TUserLogin,TUserToken}"/> class.
         /// </summary>
         protected RavenIdentityUser()
         {
