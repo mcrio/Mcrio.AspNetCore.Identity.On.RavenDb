@@ -30,40 +30,53 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb
             this IdentityBuilder builder,
             Func<IServiceProvider, IdentityDocumentSessionProvider> documentSessionProvider)
         {
-            AddStores(builder.Services, builder.UserType, builder.RoleType, documentSessionProvider);
+            return AddRavenDbStores<RavenUserStore, RavenRoleStore, RavenIdentityUser, RavenIdentityRole>(builder, documentSessionProvider);
+        }
+
+        /// <summary>
+        /// Adds the RavenDB implementation of ASP core identity stores.
+        /// </summary>
+        /// <param name="builder">The <see cref="IdentityBuilder"/> instance this method extends.</param>
+        /// <param name="documentSessionProvider">RavenDB async document session provider.</param>
+        /// <typeparam name="TRavenUserStore">User store type.</typeparam>
+        /// <typeparam name="TRavenRoleStore">Role store type.</typeparam>
+        /// <typeparam name="TUser">Identity user type.</typeparam>
+        /// <typeparam name="TRole">Identity role type.</typeparam>
+        /// <returns>Returns the <see cref="IdentityBuilder"/> instance this method extends.</returns>
+        public static IdentityBuilder AddRavenDbStores<TRavenUserStore, TRavenRoleStore, TUser, TRole>(
+            this IdentityBuilder builder,
+            Func<IServiceProvider, IdentityDocumentSessionProvider> documentSessionProvider)
+            where TRavenUserStore : RavenUserStore<TUser, TRole>
+            where TRavenRoleStore : RavenRoleStore<TRole, TUser>
+            where TUser : RavenIdentityUser
+            where TRole : RavenIdentityRole
+        {
+            AddStores<TRavenUserStore, TRavenRoleStore, TUser, TRole>(
+                builder.Services,
+                documentSessionProvider
+            );
             return builder;
         }
 
-        private static void AddStores(
+        private static void AddStores<TRavenUserStore, TRavenRoleStore, TUser, TRole>(
             IServiceCollection services,
-            Type userType,
-            Type roleType,
             Func<IServiceProvider, IdentityDocumentSessionProvider> documentSessionProvider)
+            where TRavenUserStore : RavenUserStore<TUser, TRole>
+            where TRavenRoleStore : RavenRoleStore<TRole, TUser>
+            where TUser : RavenIdentityUser
+            where TRole : RavenIdentityRole
         {
             if (documentSessionProvider == null)
             {
                 throw new ArgumentNullException(nameof(documentSessionProvider));
             }
 
-            if (!typeof(RavenIdentityUser).IsAssignableFrom(userType))
-            {
-                throw new ArgumentException("User type must be of type RavenIdentityUser.");
-            }
-
-            if (!typeof(RavenIdentityRole).IsAssignableFrom(roleType))
-            {
-                throw new ArgumentException("Role type must be of type RavenIdentityRole.");
-            }
-
             services.TryAddTransient(provider => new IdentityErrorDescriber());
 
-            services.TryAddScoped<IdentityDocumentSessionProvider>(documentSessionProvider);
+            services.TryAddScoped(documentSessionProvider);
 
-            Type userStoreType = typeof(RavenUserStore<,>).MakeGenericType(userType, roleType);
-            Type roleStoreType = typeof(RavenRoleStore<,>).MakeGenericType(roleType, userType);
-
-            services.TryAddScoped(typeof(IUserStore<>).MakeGenericType(userType), userStoreType);
-            services.TryAddScoped(typeof(IRoleStore<>).MakeGenericType(roleType), roleStoreType);
+            services.TryAddScoped<IUserStore<TUser>, TRavenUserStore>();
+            services.TryAddScoped<IRoleStore<TRole>, TRavenRoleStore>();
         }
     }
 }

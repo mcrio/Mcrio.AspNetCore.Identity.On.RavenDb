@@ -21,6 +21,26 @@ using Raven.Client.Exceptions;
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 {
     /// <inheritdoc />
+    public class RavenUserStore : RavenUserStore<RavenIdentityUser, RavenIdentityRole>
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RavenUserStore"/> class.
+        /// </summary>
+        /// <param name="identityDocumentSessionProvider">Document session provider.</param>
+        /// <param name="describer">Error describer.</param>
+        /// <param name="optionsAccessor">Identity options accessor.</param>
+        /// <param name="logger">Logger.</param>
+        public RavenUserStore(
+            IdentityDocumentSessionProvider identityDocumentSessionProvider,
+            IdentityErrorDescriber describer,
+            IOptions<IdentityOptions> optionsAccessor,
+            ILogger<RavenUserStore> logger)
+            : base(identityDocumentSessionProvider, describer, optionsAccessor, logger)
+        {
+        }
+    }
+
+    /// <inheritdoc />
     public class RavenUserStore<TUser, TRole> : RavenUserStore<TUser, string, RavenIdentityClaim,
         RavenIdentityToken, RavenIdentityUserLogin, TRole, RavenIdentityClaim>
         where TUser : RavenIdentityUser
