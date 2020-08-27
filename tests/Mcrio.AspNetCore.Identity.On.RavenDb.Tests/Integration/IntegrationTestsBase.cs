@@ -24,7 +24,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         {
             documentStore.Conventions.FindCollectionName = type =>
             {
-                if (IdentityRavenDbConventions.TryGetCollectionName<RavenIdentityUser, RavenIdentityRole>(
+                if (IdentityRavenDbConventions.TryGetCollectionName(
                     type,
                     out string? collectionName))
                 {

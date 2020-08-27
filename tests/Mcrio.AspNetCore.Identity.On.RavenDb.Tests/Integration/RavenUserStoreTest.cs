@@ -181,7 +181,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             await Assert.ThrowsAsync<ArgumentNullException>(
                 "login",
                 async () => await store.AddLoginAsync(
-                    new RavenIdentityUser(Guid.NewGuid().ToString(), "fake")!, null!
+                    new RavenIdentityUser("fake")!, null!
                 )
             );
             await Assert.ThrowsAsync<ArgumentNullException>(

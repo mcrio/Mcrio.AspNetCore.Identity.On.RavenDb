@@ -15,28 +15,26 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
         /// </summary>
-        /// <param name="id">User ID.</param>
         /// <param name="username">Username.</param>
-        public RavenIdentityUser(string id, string username)
-            : base(id, username)
+        public RavenIdentityUser(string username)
+            : base(username)
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
         /// </summary>
-        /// <param name="id">User ID.</param>
         /// <param name="username">Username.</param>
         /// <param name="email">User email.</param>
-        public RavenIdentityUser(string id, string username, string email)
-            : base(id, username, email)
+        public RavenIdentityUser(string username, string email)
+            : base(username, email)
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
         /// </summary>
-        public RavenIdentityUser()
+        protected RavenIdentityUser()
         {
         }
     }
@@ -63,24 +61,21 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityUser{TKey,TUserClaim,TUserLogin,TUserToken}"/> class.
         /// </summary>
-        /// <param name="id">User identifier.</param>
-        /// <param name="username">Username.</param>
-        protected RavenIdentityUser(TKey id, string username)
+        /// <param name="username">User's username.</param>
+        /// <param name="email">User's email address.</param>
+        protected RavenIdentityUser(string username, string email)
             : base(username)
         {
-            Id = id;
+            Email = email;
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityUser{TKey,TUserClaim,TUserLogin,TUserToken}"/> class.
         /// </summary>
-        /// <param name="id">User identifier.</param>
         /// <param name="username">User's username.</param>
-        /// <param name="email">User's email address.</param>
-        protected RavenIdentityUser(TKey id, string username, string email)
-            : this(id, username)
+        protected RavenIdentityUser(string username)
+            : base(username)
         {
-            Email = email;
         }
 
         /// <summary>

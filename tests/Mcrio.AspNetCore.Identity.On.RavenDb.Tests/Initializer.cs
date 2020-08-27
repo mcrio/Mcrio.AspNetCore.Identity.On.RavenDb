@@ -17,8 +17,9 @@ namespace Mcrio.AspNetCore.Identity.RavenDb.Tests
             DateTimeOffset? lockoutEnd = default)
         {
             username ??= username ?? Guid.NewGuid().ToString();
-            return new RavenIdentityUser(Guid.NewGuid().ToString(), username)
+            return new RavenIdentityUser(username)
             {
+                Id = Guid.NewGuid().ToString(),
                 NormalizedUserName = username,
                 Email = email,
                 NormalizedEmail = email,
@@ -32,10 +33,9 @@ namespace Mcrio.AspNetCore.Identity.RavenDb.Tests
         public static RavenIdentityRole CreateTestRole(string? roleName = null)
         {
             roleName ??= Guid.NewGuid().ToString();
-            var role = new RavenIdentityRole(
-                Guid.NewGuid().ToString(),
-                roleName)
+            var role = new RavenIdentityRole(roleName)
             {
+                Id = Guid.NewGuid().ToString(),
                 NormalizedName = roleName,
             };
             return role;

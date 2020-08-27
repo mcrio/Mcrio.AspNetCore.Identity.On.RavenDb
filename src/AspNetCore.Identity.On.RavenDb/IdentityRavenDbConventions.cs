@@ -1,4 +1,6 @@
 using System;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 
 namespace Mcrio.AspNetCore.Identity.On.RavenDb
 {
@@ -12,20 +14,18 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb
         /// </summary>
         /// <param name="type">Object type to get the collection for.</param>
         /// <param name="collectionName">Collection name found.</param>
-        /// <typeparam name="TUser">Identity user type.</typeparam>
-        /// <typeparam name="TRole">Identity role type.</typeparam>
         /// <returns>Default collection name if known type otherwise Null.</returns>
-        public static bool TryGetCollectionName<TUser, TRole>(
+        public static bool TryGetCollectionName(
             Type type,
             out string? collectionName)
         {
-            if (typeof(TUser).IsAssignableFrom(type))
+            if (typeof(RavenIdentityUser).IsAssignableFrom(type))
             {
                 collectionName = "Users";
                 return true;
             }
 
-            if (typeof(TRole).IsAssignableFrom(type))
+            if (typeof(RavenIdentityRole).IsAssignableFrom(type))
             {
                 collectionName = "Roles";
                 return true;

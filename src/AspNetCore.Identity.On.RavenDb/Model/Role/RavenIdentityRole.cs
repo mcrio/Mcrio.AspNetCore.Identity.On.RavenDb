@@ -13,17 +13,16 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityRole"/> class.
         /// </summary>
-        /// <param name="id">Role id.</param>
         /// <param name="roleName">Role name.</param>
-        public RavenIdentityRole(string id, string roleName)
-            : base(id, roleName)
+        public RavenIdentityRole(string roleName)
+            : base(roleName)
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityRole"/> class.
         /// </summary>
-        public RavenIdentityRole()
+        protected RavenIdentityRole()
         {
         }
     }
@@ -41,12 +40,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityRole"/> class.
         /// </summary>
-        /// <param name="id">Role id.</param>
         /// <param name="roleName">Role Name.</param>
-        protected RavenIdentityRole(TKey id, string roleName)
+        protected RavenIdentityRole(string roleName)
             : base(roleName)
         {
-            Id = id;
         }
 
         /// <summary>

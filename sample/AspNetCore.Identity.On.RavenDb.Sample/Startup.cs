@@ -33,7 +33,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample
             };
             store.Conventions.FindCollectionName = type =>
             {
-                if (IdentityRavenDbConventions.TryGetCollectionName<RavenIdentityUser, RavenIdentityRole>(
+                if (IdentityRavenDbConventions.TryGetCollectionName(
                     type,
                     out string? collectionName))
                 {
