@@ -25,19 +25,6 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb
         /// </summary>
         /// <param name="builder">The <see cref="IdentityBuilder"/> instance this method extends.</param>
         /// <param name="documentSessionProvider">RavenDB async document session provider.</param>
-        /// <returns>Returns the <see cref="IdentityBuilder"/> instance this method extends.</returns>
-        public static IdentityBuilder AddRavenDbStores(
-            this IdentityBuilder builder,
-            Func<IServiceProvider, IdentityDocumentSessionProvider> documentSessionProvider)
-        {
-            return AddRavenDbStores<RavenUserStore, RavenRoleStore, RavenIdentityUser, RavenIdentityRole>(builder, documentSessionProvider);
-        }
-
-        /// <summary>
-        /// Adds the RavenDB implementation of ASP core identity stores.
-        /// </summary>
-        /// <param name="builder">The <see cref="IdentityBuilder"/> instance this method extends.</param>
-        /// <param name="documentSessionProvider">RavenDB async document session provider.</param>
         /// <typeparam name="TRavenUserStore">User store type.</typeparam>
         /// <typeparam name="TRavenRoleStore">Role store type.</typeparam>
         /// <typeparam name="TUser">Identity user type.</typeparam>
@@ -72,8 +59,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb
             }
 
             services.TryAddTransient(provider => new IdentityErrorDescriber());
-
-            services.TryAddScoped(documentSessionProvider);
+            services.TryAddTransient(documentSessionProvider);
 
             services.TryAddScoped<IUserStore<TUser>, TRavenUserStore>();
             services.TryAddScoped<IRoleStore<TRole>, TRavenRoleStore>();

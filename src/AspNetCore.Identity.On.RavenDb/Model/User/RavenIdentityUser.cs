@@ -10,7 +10,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
     /// Class that represents the RavenDB Identity User.
     /// </summary>
     public class
-        RavenIdentityUser : RavenIdentityUser<string, RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken>
+        RavenIdentityUser : RavenIdentityUser<RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
@@ -34,7 +34,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
         /// </summary>
-        protected RavenIdentityUser()
+        public RavenIdentityUser()
         {
         }
     }
@@ -42,24 +42,22 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
     /// <summary>
     /// Class that represents the RavenDB Identity User.
     /// </summary>
-    /// <typeparam name="TKey">Type of the Id property.</typeparam>
     /// <typeparam name="TUserClaim">Type of user claim.</typeparam>
     /// <typeparam name="TUserLogin">Type of user login.</typeparam>
     /// <typeparam name="TUserToken">Type of user token.</typeparam>
-    public abstract class RavenIdentityUser<TKey, TUserClaim, TUserLogin, TUserToken>
-        : IdentityUser<TKey>, IClaimsReader<TUserClaim>, IClaimsWriter<TUserClaim>
-        where TKey : IEquatable<TKey>
+    public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
+        : IdentityUser<string>, IClaimsReader<TUserClaim>, IClaimsWriter<TUserClaim>, IEntity
         where TUserClaim : RavenIdentityClaim
         where TUserLogin : RavenIdentityUserLogin
         where TUserToken : RavenIdentityToken
     {
-        private HashSet<TKey> _roleIds = new HashSet<TKey>();
+        private HashSet<string> _roleIds = new HashSet<string>();
         private List<TUserLogin> _logins = new List<TUserLogin>();
         private List<TUserToken> _tokens = new List<TUserToken>();
         private List<TUserClaim> _claims = new List<TUserClaim>();
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenIdentityUser{TKey,TUserClaim,TUserLogin,TUserToken}"/> class.
+        /// Initializes a new instance of the <see cref="RavenIdentityUser{TUserClaim,TUserLogin,TUserToken}"/> class.
         /// </summary>
         /// <param name="username">User's username.</param>
         /// <param name="email">User's email address.</param>
@@ -86,7 +84,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         }
 
         /// <inheritdoc/>
-        public sealed override TKey Id { get; set; } = default!;
+        public sealed override string Id { get; set; } = default!;
 
         /// <inheritdoc/>
         public sealed override string? Email { get; set; }
@@ -112,10 +110,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// <summary>
         /// List of role ids the user is assigned to.
         /// </summary>
-        public IEnumerable<TKey> Roles
+        public IEnumerable<string> Roles
         {
             get => _roleIds.ToList().AsReadOnly();
-            private set => _roleIds = new HashSet<TKey>(value);
+            private set => _roleIds = new HashSet<string>(value);
         }
 
         /// <summary>
@@ -141,7 +139,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// </summary>
         /// <param name="roleId">Role id to check assignment for.</param>
         /// <returns>True if user is assigned to the role identified by the provided role id, otherwise False.</returns>
-        public virtual bool HasRole(TKey roleId)
+        public virtual bool HasRole(string roleId)
         {
             if (roleId is null)
             {
@@ -264,7 +262,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// Assigns a role to the user.
         /// </summary>
         /// <param name="roleId">The role id we are assigning to the user.</param>
-        internal virtual void AddRole(TKey roleId)
+        internal virtual void AddRole(string roleId)
         {
             if (roleId is null)
             {
@@ -278,7 +276,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// Removes a role assigned to the user.
         /// </summary>
         /// <param name="roleId">The role id to remove from the role assignments.</param>
-        internal virtual void RemoveRole(TKey roleId)
+        internal virtual void RemoveRole(string roleId)
         {
             if (roleId is null)
             {

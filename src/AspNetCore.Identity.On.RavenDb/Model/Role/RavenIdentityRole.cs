@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims;
 using Microsoft.AspNetCore.Identity;
@@ -8,7 +7,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role
     /// <summary>
     /// Class that represents the Identity Role.
     /// </summary>
-    public class RavenIdentityRole : RavenIdentityRole<string, RavenIdentityClaim>
+    public class RavenIdentityRole : RavenIdentityRole<RavenIdentityClaim>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityRole"/> class.
@@ -22,7 +21,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenIdentityRole"/> class.
         /// </summary>
-        protected RavenIdentityRole()
+        public RavenIdentityRole()
         {
         }
     }
@@ -30,11 +29,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role
     /// <summary>
     /// Class representing the user identity role.
     /// </summary>
-    /// <typeparam name="TKey">Type of the Id.</typeparam>
     /// <typeparam name="TRoleClaim">Type of role claim.</typeparam>
-    public abstract class RavenIdentityRole<TKey, TRoleClaim> : IdentityRole<TKey>, IClaimsReader<TRoleClaim>,
-        IClaimsWriter<TRoleClaim>
-        where TKey : IEquatable<TKey>
+    public abstract class RavenIdentityRole<TRoleClaim> : IdentityRole<string>, IClaimsReader<TRoleClaim>,
+        IClaimsWriter<TRoleClaim>, IEntity
         where TRoleClaim : RavenIdentityClaim
     {
         /// <summary>
@@ -53,8 +50,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role
         {
         }
 
-        /// <inheritdoc/>
-        public sealed override TKey Id { get; set; } = default!;
+        /// <summary>
+        /// Gets the entity Id value.
+        /// </summary>
+        public sealed override string Id { get; set; } = default!;
 
         /// <inheritdoc/>
         public override string ConcurrencyStamp { get; set; } = string.Empty;

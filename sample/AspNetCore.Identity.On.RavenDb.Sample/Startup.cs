@@ -1,5 +1,6 @@
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -61,7 +62,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample
                         options.SignIn.RequireConfirmedEmail = false;
                     }
                 )
-                .AddRavenDbStores(provider => provider.GetRequiredService<IAsyncDocumentSession>)
+                .AddRavenDbStores<RavenUserStore, RavenRoleStore, RavenIdentityUser, RavenIdentityRole>(
+                    provider => provider.GetRequiredService<IAsyncDocumentSession>
+                )
                 .AddDefaultUI()
                 .AddDefaultTokenProviders();
 

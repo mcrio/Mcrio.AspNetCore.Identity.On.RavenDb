@@ -9,6 +9,7 @@ using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
@@ -36,7 +37,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
     }
 
     /// <inheritdoc />
-    public class RavenRoleStore<TRole, TUser> : RavenRoleStore<TRole, string, RavenIdentityClaim,
+    public class RavenRoleStore<TRole, TUser> : RavenRoleStore<TRole, RavenIdentityClaim,
         TUser, RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken>
         where TRole : RavenIdentityRole
         where TUser : RavenIdentityUser
@@ -70,18 +71,16 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
     /// Class that represents the RavenDB implementation for the identity role store.
     /// </summary>
     /// <typeparam name="TRole">Role type.</typeparam>
-    /// <typeparam name="TKey">Role id type.</typeparam>
     /// <typeparam name="TRoleClaim">Role claim type.</typeparam>
     /// <typeparam name="TUser">User type.</typeparam>
     /// <typeparam name="TUserClaim">User claim type.</typeparam>
     /// <typeparam name="TUserLogin">User login type.</typeparam>
     /// <typeparam name="TUserToken">User token type.</typeparam>
-    public abstract class RavenRoleStore<TRole, TKey, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken> :
+    public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken> :
         IRoleClaimStore<TRole>, IQueryableRoleStore<TRole>
-        where TRole : RavenIdentityRole<TKey, TRoleClaim>
-        where TKey : IEquatable<TKey>
+        where TRole : RavenIdentityRole<TRoleClaim>
         where TRoleClaim : RavenIdentityClaim
-        where TUser : RavenIdentityUser<TKey, TUserClaim, TUserLogin, TUserToken>
+        where TUser : RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
         where TUserClaim : RavenIdentityClaim
         where TUserLogin : RavenIdentityUserLogin
         where TUserToken : RavenIdentityToken
@@ -89,7 +88,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         private bool _disposed;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenRoleStore{TRole,TKey,TRoleClaim,TUser,TUserClaim,TUserLogin,TUserToken}"/> class.
+        /// Initializes a new instance of the <see cref="RavenRoleStore{TRole,TRoleClaim,TUser,TUserClaim,TUserLogin,TUserToken}"/> class.
         /// </summary>
         /// <param name="documentSession">Document session.</param>
         /// <param name="errorDescriber">Error describer.</param>
@@ -97,7 +96,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         protected RavenRoleStore(
             IAsyncDocumentSession documentSession,
             IdentityErrorDescriber errorDescriber,
-            ILogger<RavenRoleStore<TRole, TKey, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken>> logger)
+            ILogger<RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken>> logger)
         {
             DocumentSession = documentSession ?? throw new ArgumentNullException(nameof(documentSession));
             ErrorDescriber = errorDescriber ?? throw new ArgumentNullException(nameof(errorDescriber));
@@ -128,7 +127,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <summary>
         /// Gets or sets the logger.
         /// </summary>
-        protected virtual ILogger<RavenRoleStore<TRole, TKey, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken>>
+        protected virtual ILogger<RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken>>
             Logger { get; }
 
         /// <inheritdoc/>
@@ -154,9 +153,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            bool nameReservationResult = await DocumentSession.CreateReservationAsync<string>(
-                RavenDbCompareExchangeExtension.ReservationType.Role,
-                RoleNameCompareExchangeUniqueValueModifier(role, role.NormalizedName)
+            CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
+            bool nameReservationResult = await compareExchangeUtility.CreateReservationAsync<string, TRole>(
+                CompareExchangeUtility.ReservationType.Role,
+                role,
+                role.NormalizedName
             ).ConfigureAwait(false);
             if (!nameReservationResult)
             {
@@ -187,9 +188,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             {
                 if (!saveSuccess)
                 {
-                    bool removeResult = await DocumentSession.RemoveReservationAsync(
-                        RavenDbCompareExchangeExtension.ReservationType.Role,
-                        RoleNameCompareExchangeUniqueValueModifier(role, role.NormalizedName)
+                    bool removeResult = await compareExchangeUtility.RemoveReservationAsync(
+                        CompareExchangeUtility.ReservationType.Role,
+                        role,
+                        role.NormalizedName
                     ).ConfigureAwait(false);
                     if (!removeResult)
                     {
@@ -222,7 +224,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 throw new ArgumentNullException(nameof(role.NormalizedName));
             }
 
-            if (!DocumentSession.Advanced.IsLoaded(role.Id.ToString()))
+            if (!DocumentSession.Advanced.IsLoaded(role.Id))
             {
                 throw new Exception("Role is expected to be already loaded in the RavenDB session.");
             }
@@ -237,7 +239,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
                 string changeVector = DocumentSession.Advanced.GetChangeVectorFor(role);
                 await DocumentSession
-                    .StoreAsync(role, changeVector, role.Id.ToString(), cancellationToken)
+                    .StoreAsync(role, changeVector, role.Id, cancellationToken)
                     .ConfigureAwait(false);
                 await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 saveSuccess = true;
@@ -260,14 +262,14 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             {
                 if (normalizedNameChange != null)
                 {
-                    string reservationToRemove = RoleNameCompareExchangeUniqueValueModifier(
-                        role,
+                    CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
+                    string reservationToRemove =
                         saveSuccess
                             ? normalizedNameChange.OldPropertyValue
-                            : normalizedNameChange.NewPropertyValue
-                    );
-                    bool removeResult = await DocumentSession.RemoveReservationAsync(
-                        RavenDbCompareExchangeExtension.ReservationType.Role,
+                            : normalizedNameChange.NewPropertyValue;
+                    bool removeResult = await compareExchangeUtility.RemoveReservationAsync(
+                        CompareExchangeUtility.ReservationType.Role,
+                        role,
                         reservationToRemove
                     ).ConfigureAwait(false);
                     if (!removeResult)
@@ -291,7 +293,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 throw new ArgumentNullException(nameof(role));
             }
 
-            if (!DocumentSession.Advanced.IsLoaded(role.Id.ToString()))
+            if (!DocumentSession.Advanced.IsLoaded(role.Id))
             {
                 throw new Exception("Role is expected to be already loaded in the RavenDB session.");
             }
@@ -315,7 +317,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             var saveSuccess = false;
             try
             {
-                DocumentSession.Delete(role.Id.ToString(), changeVector);
+                DocumentSession.Delete(role.Id, changeVector);
                 await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 saveSuccess = true;
             }
@@ -327,9 +329,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             {
                 if (saveSuccess)
                 {
-                    bool removeResult = await DocumentSession.RemoveReservationAsync(
-                        RavenDbCompareExchangeExtension.ReservationType.Role,
-                        RoleNameCompareExchangeUniqueValueModifier(role, role.NormalizedName)
+                    CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
+                    bool removeResult = await compareExchangeUtility.RemoveReservationAsync(
+                        CompareExchangeUtility.ReservationType.Role,
+                        role,
+                        role.NormalizedName
                     ).ConfigureAwait(false);
                     if (!removeResult)
                     {
@@ -352,7 +356,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 throw new ArgumentNullException(nameof(role));
             }
 
-            return Task.FromResult(role.Id.ToString());
+            return Task.FromResult(role.Id);
         }
 
         /// <inheritdoc/>
@@ -519,18 +523,6 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         protected abstract TRoleClaim CreateRoleClaim(Claim claim);
 
         /// <summary>
-        /// Optionally modify the role name unique value used in the compare exchange.
-        /// Can be used if extending service for multi tenant support.
-        /// </summary>
-        /// <param name="role">Role object.</param>
-        /// <param name="uniqueValue">Unique value to modify.</param>
-        /// <returns>Final email unique value used in the compare exchange.</returns>
-        protected virtual string RoleNameCompareExchangeUniqueValueModifier(TRole role, string uniqueValue)
-        {
-            return uniqueValue;
-        }
-
-        /// <summary>
         /// Throws and <see cref="ObjectDisposedException"/> if object was disposed.
         /// </summary>
         /// <param name="token">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
@@ -564,22 +556,19 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <exception cref="UniqueValueExistsException">If new unique value already exists.</exception>
         protected virtual Task<PropertyChange<string>?> ReserveIfRoleNameChangedAsync(TRole role)
         {
-            const RavenDbCompareExchangeExtension.ReservationType cmpExchangeReservationType =
-                RavenDbCompareExchangeExtension.ReservationType.Role;
-            const string changedPropertyName = nameof(role.NormalizedName);
-            string newValue = role.NormalizedName;
-            string newCompareExchangeUniqueValue = RoleNameCompareExchangeUniqueValueModifier(
-                role,
-                role.NormalizedName
-            );
-
             return DocumentSession.ReserveIfPropertyChangedAsync(
-                role.Id.ToString(),
-                changedPropertyName,
-                newValue,
-                newCompareExchangeUniqueValue,
-                cmpExchangeReservationType
+                CreateCompareExchangeUtility(),
+                role,
+                nameof(role.NormalizedName),
+                role.NormalizedName,
+                role.NormalizedName,
+                CompareExchangeUtility.ReservationType.Role
             );
+        }
+
+        protected virtual CompareExchangeUtility CreateCompareExchangeUtility()
+        {
+            return new CompareExchangeUtility(DocumentSession);
         }
     }
 }
