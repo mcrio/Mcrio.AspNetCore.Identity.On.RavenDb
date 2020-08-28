@@ -2,7 +2,7 @@ using System;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 
-namespace Mcrio.AspNetCore.Identity.On.RavenDb
+namespace Mcrio.AspNetCore.Identity.On.RavenDb.RavenDb
 {
     /// <summary>
     /// Method to produce predefined collection names for implemented entity types.

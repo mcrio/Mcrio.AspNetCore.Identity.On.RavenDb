@@ -1,5 +1,6 @@
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
+using Mcrio.AspNetCore.Identity.On.RavenDb.RavenDb;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;

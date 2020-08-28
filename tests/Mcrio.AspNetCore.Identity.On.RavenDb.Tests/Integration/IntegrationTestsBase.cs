@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
+using Mcrio.AspNetCore.Identity.On.RavenDb.RavenDb;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
