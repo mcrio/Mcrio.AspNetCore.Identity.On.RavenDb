@@ -1,6 +1,7 @@
 using System;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
+using Mcrio.AspNetCore.Identity.On.RavenDb.RavenDb;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,12 +10,6 @@ using Raven.Client.Documents.Session;
 
 namespace Mcrio.AspNetCore.Identity.On.RavenDb
 {
-    /// <summary>
-    /// Delegate which provides a <see cref="IAsyncDocumentSession"/> to be used as a RavenDB document session.
-    /// </summary>
-    /// <returns>RavenDB async document session.</returns>
-    public delegate IAsyncDocumentSession IdentityDocumentSessionProvider();
-
     /// <summary>
     /// Extension methods to <see cref="IdentityBuilder"/> for adding RavenDB stores.
     /// </summary>
@@ -32,7 +27,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb
         /// <returns>Returns the <see cref="IdentityBuilder"/> instance this method extends.</returns>
         public static IdentityBuilder AddRavenDbStores<TRavenUserStore, TRavenRoleStore, TUser, TRole>(
             this IdentityBuilder builder,
-            Func<IServiceProvider, IdentityDocumentSessionProvider> documentSessionProvider)
+            Func<IServiceProvider, IAsyncDocumentSession> documentSessionProvider)
             where TRavenUserStore : RavenUserStore<TUser, TRole>
             where TRavenRoleStore : RavenRoleStore<TRole, TUser>
             where TUser : RavenIdentityUser
@@ -47,7 +42,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb
 
         private static void AddStores<TRavenUserStore, TRavenRoleStore, TUser, TRole>(
             IServiceCollection services,
-            Func<IServiceProvider, IdentityDocumentSessionProvider> documentSessionProvider)
+            Func<IServiceProvider, IAsyncDocumentSession> documentSessionProvider)
             where TRavenUserStore : RavenUserStore<TUser, TRole>
             where TRavenRoleStore : RavenRoleStore<TRole, TUser>
             where TUser : RavenIdentityUser
@@ -59,8 +54,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb
             }
 
             services.TryAddTransient(provider => new IdentityErrorDescriber());
-            services.TryAddTransient(documentSessionProvider);
 
+            services.TryAddScoped<IIdentityDocumentSessionWrapper>(
+                provider => new IdentityDocumentSessionWrapper(documentSessionProvider(provider))
+            );
             services.TryAddScoped<IUserStore<TUser>, TRavenUserStore>();
             services.TryAddScoped<IRoleStore<TRole>, TRavenRoleStore>();
         }

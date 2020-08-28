@@ -61,7 +61,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                     options.Stores.ProtectPersonalData = protectPersonalData;
                 })
                 .AddRavenDbStores<RavenUserStore, RavenRoleStore, RavenIdentityUser, RavenIdentityRole>(
-                    provider => provider.GetRequiredService<IAsyncDocumentSession>
+                    provider => provider.GetRequiredService<IAsyncDocumentSession>()
                 )
                 .AddDefaultTokenProviders();
 

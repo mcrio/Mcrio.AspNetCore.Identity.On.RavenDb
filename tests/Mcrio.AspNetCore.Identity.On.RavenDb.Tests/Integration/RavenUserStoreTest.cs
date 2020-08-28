@@ -7,6 +7,7 @@ using FluentAssertions;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
+using Mcrio.AspNetCore.Identity.On.RavenDb.RavenDb;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
@@ -24,7 +25,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         public async Task UserStoreMethodsThrowWhenDisposedTest()
         {
             var store = new RavenUserStore<RavenIdentityUser, RavenIdentityRole>(
-                () => new Mock<IAsyncDocumentSession>().Object,
+                new IdentityDocumentSessionWrapper(new Mock<IAsyncDocumentSession>().Object),
                 new IdentityErrorDescriber(),
                 Options.Create(new IdentityOptions()),
                 new Mock<ILogger<RavenUserStore<RavenIdentityUser, RavenIdentityRole>>>().Object);
@@ -87,7 +88,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         public async Task UserStorePublicNullCheckTest()
         {
             var store = new RavenUserStore<RavenIdentityUser, RavenIdentityRole>(
-                () => new Mock<IAsyncDocumentSession>().Object,
+                new IdentityDocumentSessionWrapper(new Mock<IAsyncDocumentSession>().Object),
                 new IdentityErrorDescriber(),
                 Options.Create(new IdentityOptions()),
                 new Mock<ILogger<RavenUserStore<RavenIdentityUser, RavenIdentityRole>>>().Object

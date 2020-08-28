@@ -63,7 +63,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample
                     }
                 )
                 .AddRavenDbStores<RavenUserStore, RavenRoleStore, RavenIdentityUser, RavenIdentityRole>(
-                    provider => provider.GetRequiredService<IAsyncDocumentSession>
+                    provider => provider.GetRequiredService<IAsyncDocumentSession>()
                 )
                 .AddDefaultUI()
                 .AddDefaultTokenProviders();

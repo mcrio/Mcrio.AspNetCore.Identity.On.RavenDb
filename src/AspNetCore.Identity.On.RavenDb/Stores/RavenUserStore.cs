@@ -8,6 +8,7 @@ using Mcrio.AspNetCore.Identity.On.RavenDb.Model;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
+using Mcrio.AspNetCore.Identity.On.RavenDb.RavenDb;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility;
 using Microsoft.AspNetCore.Identity;
@@ -27,16 +28,16 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenUserStore"/> class.
         /// </summary>
-        /// <param name="identityDocumentSessionProvider">Document session provider.</param>
+        /// <param name="identityDocumentSessionWrapper">Identity document session wrapper.</param>
         /// <param name="describer">Error describer.</param>
         /// <param name="optionsAccessor">Identity options accessor.</param>
         /// <param name="logger">Logger.</param>
         public RavenUserStore(
-            IdentityDocumentSessionProvider identityDocumentSessionProvider,
+            IIdentityDocumentSessionWrapper identityDocumentSessionWrapper,
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
             ILogger<RavenUserStore> logger)
-            : base(identityDocumentSessionProvider, describer, optionsAccessor, logger)
+            : base(identityDocumentSessionWrapper, describer, optionsAccessor, logger)
         {
         }
     }
@@ -50,16 +51,16 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TRole}"/> class.
         /// </summary>
-        /// <param name="identityDocumentSessionProvider">Document session provider.</param>
+        /// <param name="identityDocumentSessionWrapper">Identity document session wrapper.</param>
         /// <param name="describer">Error describer.</param>
         /// <param name="optionsAccessor">Identity options accessor.</param>
         /// <param name="logger">Logger.</param>
         public RavenUserStore(
-            IdentityDocumentSessionProvider identityDocumentSessionProvider,
+            IIdentityDocumentSessionWrapper identityDocumentSessionWrapper,
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
             ILogger<RavenUserStore<TUser, TRole>> logger)
-            : base(identityDocumentSessionProvider(), describer, optionsAccessor, logger)
+            : base(identityDocumentSessionWrapper.Session, describer, optionsAccessor, logger)
         {
         }
 
@@ -105,16 +106,16 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim}"/> class.
         /// </summary>
-        /// <param name="documentSession">Document session.</param>
+        /// <param name="documentSessionWrapper">Document session.</param>
         /// <param name="describer">Error describer.</param>
         /// <param name="optionsAccessor">Identity options accessor.</param>
         /// <param name="logger">Logger.</param>
         protected RavenUserStore(
-            IAsyncDocumentSession documentSession,
+            IAsyncDocumentSession documentSessionWrapper,
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
             ILogger<RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim>> logger)
-            : base(documentSession, describer, optionsAccessor, logger)
+            : base(documentSessionWrapper, describer, optionsAccessor, logger)
         {
         }
     }
@@ -139,12 +140,12 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim,TAspUserClaim,TAspUserRole,TAspUserLogin,TAspUserToken,TAspRoleClaim}"/> class.
         /// </summary>
-        /// <param name="documentSession">Document session.</param>
+        /// <param name="documentSessionWrapper">Document session.</param>
         /// <param name="describer">Error describer.</param>
         /// <param name="optionsAccessor">Identity options accessor.</param>
         /// <param name="logger">Logger.</param>
         protected RavenUserStore(
-            IAsyncDocumentSession documentSession,
+            IAsyncDocumentSession documentSessionWrapper,
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
             ILogger<RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim, TAspUserClaim,
@@ -152,7 +153,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 logger)
             : base(describer)
         {
-            DocumentSession = documentSession ?? throw new ArgumentNullException(nameof(documentSession));
+            DocumentSession = documentSessionWrapper ?? throw new ArgumentNullException(nameof(documentSessionWrapper));
             OptionsAccessor = optionsAccessor;
             Logger = logger;
         }
