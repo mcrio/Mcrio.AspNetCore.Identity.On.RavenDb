@@ -45,7 +45,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
             var serviceCollection = new ServiceCollection();
 
-            serviceCollection.TryAddSingleton(provider =>
+            serviceCollection.TryAddSingleton(_documentStore);
+            serviceCollection.TryAddScoped(_ =>
                 _documentStore.OpenAsyncSession()
             );
 
