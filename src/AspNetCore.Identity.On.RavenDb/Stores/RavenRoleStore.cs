@@ -25,14 +25,14 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenRoleStore"/> class.
         /// </summary>
-        /// <param name="identityDocumentSessionWrapper">Identity Document session wrapper.</param>
+        /// <param name="documentSessionProvider">Identity Document session provider.</param>
         /// <param name="errorDescriber">Error describer.</param>
         /// <param name="logger">Logger.</param>
         public RavenRoleStore(
-            IIdentityDocumentSessionWrapper identityDocumentSessionWrapper,
+            IdentityDocumentSessionProvider documentSessionProvider,
             IdentityErrorDescriber errorDescriber,
             ILogger<RavenRoleStore> logger)
-            : base(identityDocumentSessionWrapper, errorDescriber, logger)
+            : base(documentSessionProvider, errorDescriber, logger)
         {
         }
     }
@@ -46,18 +46,18 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenRoleStore{TRole,TUser}"/> class.
         /// </summary>
-        /// <param name="identityDocumentSessionWrapper">Identity Document session wrapper.</param>
+        /// <param name="documentSessionProvider">Identity Document session provider.</param>
         /// <param name="errorDescriber">Error describer.</param>
         /// <param name="logger">Logger.</param>
         public RavenRoleStore(
-            IIdentityDocumentSessionWrapper identityDocumentSessionWrapper,
+            IdentityDocumentSessionProvider documentSessionProvider,
             IdentityErrorDescriber errorDescriber,
             ILogger<RavenRoleStore<TRole, TUser>> logger)
-            : base(identityDocumentSessionWrapper.Session, errorDescriber, logger)
+            : base(documentSessionProvider(), errorDescriber, logger)
         {
-            if (identityDocumentSessionWrapper == null)
+            if (documentSessionProvider == null)
             {
-                throw new ArgumentNullException(nameof(identityDocumentSessionWrapper));
+                throw new ArgumentNullException(nameof(documentSessionProvider));
             }
         }
 
@@ -91,15 +91,15 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenRoleStore{TRole,TRoleClaim,TUser,TUserClaim,TUserLogin,TUserToken}"/> class.
         /// </summary>
-        /// <param name="documentSessionWrapper">Document session.</param>
+        /// <param name="documentSession">Document session.</param>
         /// <param name="errorDescriber">Error describer.</param>
         /// <param name="logger">Logger.</param>
         protected RavenRoleStore(
-            IAsyncDocumentSession documentSessionWrapper,
+            IAsyncDocumentSession documentSession,
             IdentityErrorDescriber errorDescriber,
             ILogger<RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken>> logger)
         {
-            DocumentSession = documentSessionWrapper ?? throw new ArgumentNullException(nameof(documentSessionWrapper));
+            DocumentSession = documentSession ?? throw new ArgumentNullException(nameof(documentSession));
             ErrorDescriber = errorDescriber ?? throw new ArgumentNullException(nameof(errorDescriber));
             Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
