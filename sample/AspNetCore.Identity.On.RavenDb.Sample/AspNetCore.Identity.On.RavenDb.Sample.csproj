@@ -9,10 +9,10 @@
     <UserSecretsId>3531e46d-3a63-484e-8520-21cd99f9a1d7</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="3.1.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="3.1.9" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118" />
-    <PackageReference Include="RavenDB.Client" Version="4.2.103" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Facebook" Version="3.1.6" />
+    <PackageReference Include="RavenDB.Client" Version="5.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Facebook" Version="3.1.9" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\AspNetCore.Identity.On.RavenDb\AspNetCore.Identity.On.RavenDb.csproj" />

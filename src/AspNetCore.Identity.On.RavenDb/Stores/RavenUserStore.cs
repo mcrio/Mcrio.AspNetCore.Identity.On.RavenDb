@@ -647,7 +647,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             IQueryable<TUser> query = DocumentSession.Query<TUser>()
                 .Where(user => user.Claims.Any(item => item.Type == claim.Type && item.Value == claim.Value));
 
-            Raven.Client.Util.IAsyncEnumerator<StreamResult<TUser>> streamResult = await DocumentSession
+            IAsyncEnumerator<StreamResult<TUser>> streamResult = await DocumentSession
                 .Advanced
                 .StreamAsync(query, cancellationToken)
                 .ConfigureAwait(false);
@@ -879,7 +879,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             IQueryable<TUser> query = DocumentSession.Query<TUser>()
                 .Where(item => item.Roles.Contains(role.Id));
 
-            Raven.Client.Util.IAsyncEnumerator<StreamResult<TUser>> streamResult = await DocumentSession
+            IAsyncEnumerator<StreamResult<TUser>> streamResult = await DocumentSession
                 .Advanced
                 .StreamAsync(query, cancellationToken)
                 .ConfigureAwait(false);
