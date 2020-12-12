@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Security.Claims;
 using FluentAssertions;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims;
 using Xunit;
