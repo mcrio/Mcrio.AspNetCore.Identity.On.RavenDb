@@ -120,10 +120,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility
         {
             return reservationType switch
             {
-                ReservationType.Role => "identity/role",
-                ReservationType.Username => "identity/username",
-                ReservationType.Email => "identity/email",
-                ReservationType.Login => "identity/login",
+                ReservationType.Role => "idnt/role",
+                ReservationType.Username => "idnt/uname",
+                ReservationType.Email => "idnt/email",
+                ReservationType.Login => "idnt/login",
                 _ => throw new Exception($"Unhandled reservation type {reservationType}")
             };
         }

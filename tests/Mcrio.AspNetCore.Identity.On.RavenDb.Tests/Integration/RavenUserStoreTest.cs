@@ -295,10 +295,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await InitializeServices().UserManager.FindByNameAsync(user.UserName)).Should().NotBeNull();
             (await InitializeServices().UserManager.FindByIdAsync(user.Id)).Should().NotBeNull();
 
-            await AssertCompareExchangeKeyExistsAsync($"identity/username/{user.NormalizedUserName}",
+            await AssertCompareExchangeKeyExistsAsync($"idnt/uname/{user.NormalizedUserName}",
                 "user was created");
             await AssertCompareExchangeKeyDoesNotExistAsync(
-                $"identity/email/{user.NormalizedEmail}",
+                $"idnt/email/{user.NormalizedEmail}",
                 "unique email is not required"
             );
 
@@ -317,10 +317,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
             user.Id.Should().NotBeNull("RavenDb automatically assigned an ID.");
 
-            await AssertCompareExchangeKeyExistsAsync($"identity/username/{user.NormalizedUserName}",
+            await AssertCompareExchangeKeyExistsAsync($"idnt/uname/{user.NormalizedUserName}",
                 "user was created");
             await AssertCompareExchangeKeyDoesNotExistAsync(
-                $"identity/email/{user.NormalizedEmail}",
+                $"idnt/email/{user.NormalizedEmail}",
                 "unique email is not required"
             );
 
@@ -339,10 +339,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
             user.Id.Should().NotBeNull("RavenDb automatically assigned an ID.");
 
-            await AssertCompareExchangeKeyExistsAsync($"identity/username/{user.NormalizedUserName}",
+            await AssertCompareExchangeKeyExistsAsync($"idnt/uname/{user.NormalizedUserName}",
                 "user was created");
             await AssertCompareExchangeKeyDoesNotExistAsync(
-                $"identity/email/{user.NormalizedEmail}",
+                $"idnt/email/{user.NormalizedEmail}",
                 "unique email is not required"
             );
 
@@ -368,9 +368,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
             (await store.CreateAsync(user)).Succeeded.Should().BeFalse("because username is already taken");
 
-            await AssertCompareExchangeKeyExistsAsync("identity/username/username", "user exists");
-            await AssertCompareExchangeKeyExistsAsync("identity/username/username-2", "user exists");
-            await AssertCompareExchangeKeyExistsAsync("identity/username/username-3", "user exists");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username", "user exists");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username-2", "user exists");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username-3", "user exists");
 
             WaitForUserToContinueTheTest(scope.DocumentStore);
         }
@@ -402,14 +402,14 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
             (await store.CreateAsync(user)).Succeeded.Should().BeFalse("username is already taken");
 
-            await AssertCompareExchangeKeyExistsAsync("identity/username/username", "user was created");
-            await AssertCompareExchangeKeyExistsAsync("identity/username/username-2", "user was created");
-            await AssertCompareExchangeKeyExistsAsync("identity/username/username-3", "user was created");
-            await AssertCompareExchangeKeyExistsAsync("identity/email/foo@bar.com", "user was created");
-            await AssertCompareExchangeKeyExistsAsync("identity/email/foo2@bar.com", "user was created");
-            await AssertCompareExchangeKeyExistsAsync("identity/email/foo3@bar.com", "user was created");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username", "user was created");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username-2", "user was created");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username-3", "user was created");
+            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com", "user was created");
+            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo2@bar.com", "user was created");
+            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo3@bar.com", "user was created");
             await AssertCompareExchangeKeyDoesNotExistAsync(
-                "identity/username/some-user",
+                "idnt/uname/some-user",
                 "user was not added due to unique email collision"
             );
 
@@ -430,8 +430,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await InitializeServices().UserManager.FindByNameAsync(user.UserName)).Should().NotBeNull();
             (await InitializeServices().UserManager.FindByEmailAsync(user.Email)).Should().NotBeNull();
 
-            await AssertCompareExchangeKeyExistsAsync("identity/username/username", "user was created");
-            await AssertCompareExchangeKeyExistsAsync("identity/email/foo@bar.com", "user was created");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username", "user was created");
+            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com", "user was created");
 
             // delete user
             IdentityResultAssert.IsSuccess(await manager.DeleteAsync(user));
@@ -441,8 +441,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await InitializeServices().UserManager.FindByNameAsync(user.UserName)).Should().BeNull();
             (await InitializeServices().UserManager.FindByEmailAsync(user.Email)).Should().BeNull();
 
-            await AssertCompareExchangeKeyDoesNotExistAsync("identity/username/username", "user was deleted");
-            await AssertCompareExchangeKeyDoesNotExistAsync("identity/email/foo@bar.com", "user was deleted");
+            await AssertCompareExchangeKeyDoesNotExistAsync("idnt/uname/username", "user was deleted");
+            await AssertCompareExchangeKeyDoesNotExistAsync("idnt/email/foo@bar.com", "user was deleted");
 
             // reinsert user
             var scope2 = InitializeServices(requiredEmail);
@@ -455,8 +455,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await InitializeServices().UserManager.FindByEmailAsync(user.Email)).Should().NotBeNull();
 
             WaitForUserToContinueTheTest(scope.DocumentStore);
-            await AssertCompareExchangeKeyExistsAsync("identity/username/username", "user was created");
-            await AssertCompareExchangeKeyExistsAsync("identity/email/foo@bar.com", "user was created");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username", "user was created");
+            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com", "user was created");
         }
 
         [Fact]
@@ -489,8 +489,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 .Should()
                 .Contain(info => info.LoginProvider == "provider2" && info.ProviderKey == "key2");
 
-            await AssertCompareExchangeKeyExistsWithValueAsync("identity/login/provider/key", user.Id);
-            await AssertCompareExchangeKeyExistsWithValueAsync("identity/login/provider2/key2", user.Id);
+            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", user.Id);
+            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider2/key2", user.Id);
         }
 
         [Fact]
@@ -520,7 +520,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             var anotherUserRetrieved = await InitializeServices().UserManager.FindByIdAsync(anotherUser.Id);
             anotherUserRetrieved.Logins.Count.Should().Be(0);
 
-            await AssertCompareExchangeKeyExistsWithValueAsync("identity/login/provider/key", user.Id);
+            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", user.Id);
         }
 
         [Fact]
@@ -536,8 +536,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             await manager.AddLoginAsync(user, new UserLoginInfo("provider", "key", "displayNameOfDuplicate"));
             await manager.AddLoginAsync(user, new UserLoginInfo("provider2", "key2", "displayName"));
 
-            await AssertCompareExchangeKeyExistsWithValueAsync("identity/login/provider/key", user.Id);
-            await AssertCompareExchangeKeyExistsWithValueAsync("identity/login/provider2/key2", user.Id);
+            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", user.Id);
+            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider2/key2", user.Id);
 
             var scope2 = InitializeServices();
             var manager2 = scope2.UserManager;
@@ -559,9 +559,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await manager2.AddLoginAsync(retrievedUser, new UserLoginInfo("provider", "key", "baz")))
                 .Succeeded.Should().BeFalse("already exists");
 
-            await AssertCompareExchangeKeyExistsWithValueAsync("identity/login/provider/key", retrievedUser.Id);
-            await AssertCompareExchangeKeyExistsWithValueAsync("identity/login/provider2/key2", retrievedUser.Id);
-            await AssertCompareExchangeKeyExistsWithValueAsync("identity/login/provier3/key3", retrievedUser.Id);
+            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", retrievedUser.Id);
+            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider2/key2", retrievedUser.Id);
+            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provier3/key3", retrievedUser.Id);
         }
 
         [Fact]
@@ -576,8 +576,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             await manager.AddLoginAsync(user, new UserLoginInfo("provider", "key", "displayName"));
             await manager.AddLoginAsync(user, new UserLoginInfo("provider2", "key2", "displayName"));
 
-            await AssertCompareExchangeKeyExistsWithValueAsync("identity/login/provider/key", user.Id);
-            await AssertCompareExchangeKeyExistsWithValueAsync("identity/login/provider2/key2", user.Id);
+            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", user.Id);
+            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider2/key2", user.Id);
 
             var anotherUser = CreateTestUser();
             var manager2 = InitializeServices().UserManager;
@@ -589,7 +589,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
             (await manager2.AddLoginAsync(anotherUser, new UserLoginInfo("provider", "key", "displayName")))
                 .Succeeded.Should().BeTrue("this login data no longer exists in the database.");
-            await AssertCompareExchangeKeyExistsWithValueAsync("identity/login/provider/key", anotherUser.Id);
+            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", anotherUser.Id);
         }
 
         [Fact]
@@ -974,7 +974,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             var user = await SeedUserWithTwoRolesAndTwoClaims(userName: username);
             user.Should().NotBeNull();
 
-            await AssertCompareExchangeKeyExistsAsync($"identity/username/{user.NormalizedUserName}");
+            await AssertCompareExchangeKeyExistsAsync($"idnt/uname/{user.NormalizedUserName}");
 
             {
                 var scope = InitializeServices();
@@ -988,7 +988,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                     );
             }
 
-            await AssertCompareExchangeKeyExistsAsync($"identity/username/{user.NormalizedUserName}");
+            await AssertCompareExchangeKeyExistsAsync($"idnt/uname/{user.NormalizedUserName}");
 
             {
                 var store = InitializeServices().UserStore;
@@ -998,8 +998,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 await store.UpdateAsync(retrievedUser);
             }
 
-            await AssertCompareExchangeKeyDoesNotExistAsync($"identity/username/{user.NormalizedUserName}");
-            await AssertCompareExchangeKeyExistsAsync("identity/username/test123");
+            await AssertCompareExchangeKeyDoesNotExistAsync($"idnt/uname/{user.NormalizedUserName}");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/test123");
 
             {
                 var scope = InitializeServices();
@@ -1010,8 +1010,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 WaitForUserToContinueTheTest(scope.DocumentStore);
             }
 
-            await AssertCompareExchangeKeyExistsAsync($"identity/username/{username}");
-            await AssertCompareExchangeKeyExistsAsync("identity/username/test123");
+            await AssertCompareExchangeKeyExistsAsync($"idnt/uname/{username}");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/test123");
         }
 
         /// <summary>
@@ -1057,25 +1057,25 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             var user2 = CreateTestUser("some-user-2", "foo@bar.com");
             (await store.CreateAsync(user2)).Succeeded.Should().BeFalse("user with same email exists.");
 
-            await AssertCompareExchangeKeyExistsAsync("identity/username/some-user");
-            await AssertCompareExchangeKeyExistsAsync("identity/email/foo@bar.com");
-            await AssertCompareExchangeKeyDoesNotExistAsync("identity/username/some-user-2");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
+            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com");
+            await AssertCompareExchangeKeyDoesNotExistAsync("idnt/uname/some-user-2");
 
             await store.SetEmailAsync(user, "baz@baz.com");
             await store.SetNormalizedEmailAsync(user, "baz@baz.com");
             await store.UpdateAsync(user);
 
-            await AssertCompareExchangeKeyExistsAsync("identity/username/some-user");
-            await AssertCompareExchangeKeyDoesNotExistAsync("identity/email/foo@bar.com");
-            await AssertCompareExchangeKeyExistsAsync("identity/email/baz@baz.com");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
+            await AssertCompareExchangeKeyDoesNotExistAsync("idnt/email/foo@bar.com");
+            await AssertCompareExchangeKeyExistsAsync("idnt/email/baz@baz.com");
 
             var store3 = InitializeServices(requireUniqueEmail).UserStore;
             (await store3.CreateAsync(user2)).Succeeded.Should().BeTrue();
 
-            await AssertCompareExchangeKeyExistsAsync("identity/username/some-user");
-            await AssertCompareExchangeKeyExistsAsync("identity/email/baz@baz.com");
-            await AssertCompareExchangeKeyExistsAsync("identity/username/some-user-2");
-            await AssertCompareExchangeKeyExistsAsync("identity/email/foo@bar.com");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
+            await AssertCompareExchangeKeyExistsAsync("idnt/email/baz@baz.com");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user-2");
+            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com");
         }
 
         /// <summary>
@@ -1096,9 +1096,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             var user2 = CreateTestUser("some-user-2", "foo@bar.com");
             (await store.CreateAsync(user2)).Succeeded.Should().BeTrue("unique email is not required");
 
-            await AssertCompareExchangeKeyExistsAsync("identity/username/some-user");
-            await AssertCompareExchangeKeyExistsAsync("identity/username/some-user-2");
-            await AssertCompareExchangeKeyDoesNotExistAsync("identity/email/foo@bar.com");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user-2");
+            await AssertCompareExchangeKeyDoesNotExistAsync("idnt/email/foo@bar.com");
         }
 
         [Fact]
@@ -1118,17 +1118,17 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
             WaitForIndexing(scope.DocumentStore);
 
-            await AssertCompareExchangeKeyExistsAsync("identity/username/some-user");
-            await AssertCompareExchangeKeyExistsAsync("identity/email/foo@bar.com");
-            await AssertCompareExchangeKeyDoesNotExistAsync("identity/username/some-user-2");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
+            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com");
+            await AssertCompareExchangeKeyDoesNotExistAsync("idnt/uname/some-user-2");
 
             var user3 = CreateTestUser("some-user-3", "foo3@bar.com");
             (await manager.CreateAsync(user3)).Succeeded.Should().BeTrue("has different email");
 
-            await AssertCompareExchangeKeyExistsAsync("identity/username/some-user");
-            await AssertCompareExchangeKeyExistsAsync("identity/email/foo@bar.com");
-            await AssertCompareExchangeKeyExistsAsync("identity/username/some-user-3");
-            await AssertCompareExchangeKeyExistsAsync("identity/email/foo3@bar.com");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
+            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user-3");
+            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo3@bar.com");
         }
 
         [Fact]
@@ -1148,9 +1148,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
             WaitForIndexing(scope.DocumentStore);
 
-            await AssertCompareExchangeKeyExistsAsync("identity/username/some-user");
-            await AssertCompareExchangeKeyExistsAsync("identity/username/some-user-2");
-            await AssertCompareExchangeKeyDoesNotExistAsync("identity/email/foo@bar.com");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
+            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user-2");
+            await AssertCompareExchangeKeyDoesNotExistAsync("idnt/email/foo@bar.com");
         }
 
         [Fact]
