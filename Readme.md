@@ -2,6 +2,9 @@
 <img src="https://github.com/mcrio/Mcrio.AspNetCore.Identity.On.RavenDb/raw/master/asp-net-core-logo.png" height="100px" alt="asp net core" />
 
 # ASP.NET Core Identity on RavenDB 
+
+[![Build status](https://dev.azure.com/midnight-creative/Mcrio.AspNetCore.Identity.On.RavenDb/_apis/build/status/Build)](https://dev.azure.com/midnight-creative/Mcrio.AspNetCore.Identity.On.RavenDb/_build/latest?definitionId=3)
+
 A RavenDB *copy of the original EntityFramework user and role stores implementation.
 Use RavenDB to store your user and role entities. Covers most of the tests implemented 
 by the official EntityFramework stores.
