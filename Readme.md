@@ -1,5 +1,4 @@
-<img src="./ravendb-logo.png" height="100px" alt="RavenDB" />
-<img src="./asp-net-core-logo.png" height="100px" alt="asp net core" />
+<img src="https://github.com/mcrio/Mcrio.AspNetCore.Identity.On.RavenDb/raw/master/ravendb-logo.png" height="90px" alt="RavenDB" /> <img src="https://github.com/mcrio/Mcrio.AspNetCore.Identity.On.RavenDb/raw/master/asp-net-core-logo.png" height="90px" alt="asp net core" />
 
 # ASP.NET Core Identity on RavenDB 
 A RavenDB *copy of the original EntityFramework user and role stores implementation.
