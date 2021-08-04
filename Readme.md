@@ -44,7 +44,7 @@ $ dotnet run -p sample/Mcrio.AspNetCore.Identity.On.RavenDB.Sample/Mcrio.AspNetC
 
 ### NuGet Package
 
-Using the NuGet package manager install the [Mcrio.AspNetCore.Identity.On.RavenDb](#) package, or add the following line to the .csproj file:
+Using the NuGet package manager install the [Mcrio.AspNetCore.Identity.On.RavenDb](https://www.nuget.org/packages/Mcrio.AspNetCore.Identity.On.RavenDb/) package, or add the following line to the .csproj file:
 
 ```xml
 <ItemGroup>
