@@ -289,7 +289,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         /// <summary>
         /// Adds a user login to the user.
         /// </summary>
-        /// <param name="newUserLogin">The <see cref="TUserLogin"/> we want to add.</param>
+        /// <param name="newUserLogin">User login we want to add.</param>
         internal virtual void AddLogin(TUserLogin newUserLogin)
         {
             if (newUserLogin is null)
@@ -306,9 +306,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         }
 
         /// <summary>
-        /// Removes the given <see cref="TUserLogin"/> from the user.
+        /// Removes the given user login from the user.
         /// </summary>
-        /// <param name="userLoginToRemove">The <see cref="TUserLogin"/> to remove.</param>
+        /// <param name="userLoginToRemove">The user login to remove.</param>
         internal virtual void RemoveLogin(TUserLogin userLoginToRemove)
         {
             if (userLoginToRemove is null)
@@ -320,7 +320,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         }
 
         /// <summary>
-        /// Removes the given <see cref="TUserLogin"/> from the user.
+        /// Removes the given user login from the user.
         /// </summary>
         /// <param name="loginProvider">Login provider.</param>
         /// <param name="providerKey">Provider key.</param>

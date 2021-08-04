@@ -6,7 +6,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
     public class RavenIdentityUserLogin
     {
         /// <summary>
-        /// Creates a new instance of <see cref="UserLoginInfo"/>.
+        /// Creates a new instance of <see cref="RavenIdentityUserLogin"/>.
         /// </summary>
         /// <param name="loginProvider">The provider associated with this login information.</param>
         /// <param name="providerKey">The unique identifier for this user provided by the login provider.</param>
@@ -23,9 +23,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         }
 
         /// <summary>
-        /// Sets the provider for this instance of <see cref="UserLoginInfo"/>.
+        /// Sets the provider for this instance of <see cref="RavenIdentityUserLogin"/>.
         /// </summary>
-        /// <value>The provider for the this instance of <see cref="UserLoginInfo"/>.</value>
+        /// <value>The provider for the this instance of <see cref="RavenIdentityUserLogin"/>.</value>
         /// <remarks>
         /// Examples of the provider may be Local, Facebook, Google, etc.
         /// </remarks>

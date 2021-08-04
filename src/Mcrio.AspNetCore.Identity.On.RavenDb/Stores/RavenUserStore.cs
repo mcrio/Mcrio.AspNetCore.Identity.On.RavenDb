@@ -1008,26 +1008,26 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         }
 
         /// <summary>
-        /// Creates a <see cref="TUserClaim"/> object.
+        /// Creates a claim object.
         /// </summary>
         /// <param name="claim">Source claim.</param>
-        /// <returns>A <see cref="TUserClaim"/> object.</returns>
+        /// <returns>A claim object.</returns>
         protected abstract TUserClaim CreateUserClaim(Claim claim);
 
         /// <summary>
-        /// Creates a <see cref="TUserToken"/> object.
+        /// Creates a token object.
         /// </summary>
         /// <param name="loginProvider">Login provider.</param>
         /// <param name="tokenName">Token name.</param>
         /// <param name="tokenValue">Token value.</param>
-        /// <returns>An object representing a <see cref="TUserToken"/> class.</returns>
+        /// <returns>An object representing a user token class.</returns>
         protected abstract TUserToken CreateUserToken(string loginProvider, string tokenName, string tokenValue);
 
         /// <summary>
-        /// Creates a <see cref="TUserLogin"/> object.
+        /// Creates a user login object.
         /// </summary>
         /// <param name="loginInfo">Login info.</param>
-        /// <returns>An object representing the <see cref="TUserLogin"/> class.</returns>
+        /// <returns>An object representing the user login class.</returns>
         protected abstract TUserLogin CreateUserLogin(UserLoginInfo loginInfo);
 
         /// <summary>
@@ -1065,9 +1065,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// </summary>
         /// <param name="userToken">User token information.</param>
         /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-        [Obsolete("We implement the functionality in SetTokenAsync directly.")]
         protected override Task AddUserTokenAsync(TAspUserToken userToken)
         {
+            // We implement the functionality in SetTokenAsync directly, returning completed task.
             return Task.CompletedTask;
         }
 
@@ -1316,6 +1316,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             );
         }
 
+        /// <summary>
+        /// Compare exchange utility factory.
+        /// </summary>
+        /// <returns>An instance of <see cref="CompareExchangeUtility"/>.</returns>
         protected virtual CompareExchangeUtility CreateCompareExchangeUtility()
         {
             return new CompareExchangeUtility(DocumentSession);

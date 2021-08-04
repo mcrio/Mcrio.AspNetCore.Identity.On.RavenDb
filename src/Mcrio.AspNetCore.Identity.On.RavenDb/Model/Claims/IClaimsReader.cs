@@ -10,7 +10,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims
         where TRoleClaim : RavenIdentityClaim
     {
         /// <summary>
-        /// Claims the <see cref="IClaimsReader"/> implementer has.
+        /// List of Claims the <see cref="IClaimsReader{TRoleClaim}"/> implementer contains.
         /// </summary>
         IReadOnlyList<TRoleClaim> Claims { get; }
     }

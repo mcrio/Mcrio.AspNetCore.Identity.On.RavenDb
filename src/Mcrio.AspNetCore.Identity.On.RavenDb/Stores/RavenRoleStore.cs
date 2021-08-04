@@ -567,6 +567,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             );
         }
 
+        /// <summary>
+        /// Compare exchange utility factory.
+        /// </summary>
+        /// <returns>An instance of <see cref="CompareExchangeUtility"/>.</returns>
         protected virtual CompareExchangeUtility CreateCompareExchangeUtility()
         {
             return new CompareExchangeUtility(DocumentSession);

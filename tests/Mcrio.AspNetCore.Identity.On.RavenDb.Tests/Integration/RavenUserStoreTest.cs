@@ -295,8 +295,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await InitializeServices().UserManager.FindByNameAsync(user.UserName)).Should().NotBeNull();
             (await InitializeServices().UserManager.FindByIdAsync(user.Id)).Should().NotBeNull();
 
-            await AssertCompareExchangeKeyExistsAsync($"idnt/uname/{user.NormalizedUserName}",
-                "user was created");
+            await AssertCompareExchangeKeyExistsAsync(
+                $"idnt/uname/{user.NormalizedUserName}",
+                "user was created"
+            );
             await AssertCompareExchangeKeyDoesNotExistAsync(
                 $"idnt/email/{user.NormalizedEmail}",
                 "unique email is not required"
@@ -317,8 +319,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
             user.Id.Should().NotBeNull("RavenDb automatically assigned an ID.");
 
-            await AssertCompareExchangeKeyExistsAsync($"idnt/uname/{user.NormalizedUserName}",
-                "user was created");
+            await AssertCompareExchangeKeyExistsAsync(
+                $"idnt/uname/{user.NormalizedUserName}",
+                "user was created"
+            );
             await AssertCompareExchangeKeyDoesNotExistAsync(
                 $"idnt/email/{user.NormalizedEmail}",
                 "unique email is not required"
@@ -339,8 +343,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
             user.Id.Should().NotBeNull("RavenDb automatically assigned an ID.");
 
-            await AssertCompareExchangeKeyExistsAsync($"idnt/uname/{user.NormalizedUserName}",
-                "user was created");
+            await AssertCompareExchangeKeyExistsAsync(
+                $"idnt/uname/{user.NormalizedUserName}",
+                "user was created"
+            );
             await AssertCompareExchangeKeyDoesNotExistAsync(
                 $"idnt/email/{user.NormalizedEmail}",
                 "unique email is not required"

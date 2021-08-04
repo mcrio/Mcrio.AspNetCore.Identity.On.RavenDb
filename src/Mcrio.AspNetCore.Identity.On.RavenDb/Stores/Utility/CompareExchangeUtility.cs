@@ -63,7 +63,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility
             ReservationType reservationType,
             TEntity entity,
             string expectedUniqueValue,
-            TValue data = default)
+            TValue data = default!)
             where TEntity : IEntity
         {
             return CreateReservationAsync(
@@ -149,7 +149,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility
 
         private async Task<bool> CreateReservationAsync<TValue>(
             string cmpExchangeKey,
-            TValue data = default)
+            TValue data = default!)
         {
             IDocumentStore documentStore = _documentSession.Advanced.DocumentStore;
 

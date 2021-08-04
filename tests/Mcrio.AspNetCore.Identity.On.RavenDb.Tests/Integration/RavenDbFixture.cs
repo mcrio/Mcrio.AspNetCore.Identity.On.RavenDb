@@ -15,9 +15,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
         public IDocumentStore DocumentStore => _documentStore.Value;
 
-        private IDocumentStore CreateDocumentStore()
+        public sealed override void Dispose()
         {
-            return GetDocumentStore();
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing)
@@ -31,10 +32,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             }
         }
 
-        public sealed override void Dispose()
+        private IDocumentStore CreateDocumentStore()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            return GetDocumentStore();
         }
     }
 }

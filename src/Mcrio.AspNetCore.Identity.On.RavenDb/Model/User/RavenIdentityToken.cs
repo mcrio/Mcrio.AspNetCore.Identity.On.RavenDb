@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
 {
     /// <summary>
-    /// Class that represents a token the <see cref="RavenIdentityUser{TKey}" /> object can have.
+    /// Class that represents a token the <see cref="RavenIdentityUser" /> object can contain.
     /// </summary>
     public class RavenIdentityToken
     {

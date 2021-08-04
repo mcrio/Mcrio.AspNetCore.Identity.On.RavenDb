@@ -1,13 +1,13 @@
 ﻿@using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
 @using Microsoft.AspNetCore.Identity
-@inject SignInManager<RavenIdentityUser> SignInManager
-@inject UserManager<RavenIdentityUser> UserManager
+@inject SignInManager<RavenIdentityUser> _signInManager
+@inject UserManager<RavenIdentityUser> _userManager
 
 <ul class="navbar-nav">
-    @if (SignInManager.IsSignedIn(User))
+    @if (_signInManager.IsSignedIn(User))
     {
         <li class="nav-item">
-            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Manage/Index" title="Manage">Hello @User.Identity.Name!</a>
+            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Manage/Index" title="Manage">Hello @User.Identity?.Name!</a>
         </li>
         <li class="nav-item">
             <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post">

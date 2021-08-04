@@ -16,6 +16,8 @@ _(I am writing this document more than a year later so there may have been other
 
 - Support for [[PersonalData]](https://docs.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.identity.personaldataattribute?view=aspnetcore-5.0) 
   attribute in terms of DB level encryption of properties annotated with the `[PersonalData]` attribute.
+- There is no implementation of the `UserOnly` store. If required use the provided user and roles stores and ignore
+  roles related functionality.
 
 ## Getting Started
 
