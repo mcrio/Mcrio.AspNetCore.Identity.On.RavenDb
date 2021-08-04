@@ -13,6 +13,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Facebook" Version="5.0.7" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\AspNetCore.Identity.On.RavenDb\AspNetCore.Identity.On.RavenDb.csproj" />
+    <ProjectReference Include="..\..\src\Mcrio.AspNetCore.Identity.On.RavenDb\Mcrio.AspNetCore.Identity.On.RavenDb.csproj" />
   </ItemGroup>
 </Project>

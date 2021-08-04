@@ -68,7 +68,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenIdentityUser{TKey,TUserClaim,TUserLogin,TUserToken}"/> class.
+        /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
         /// </summary>
         /// <param name="username">User's username.</param>
         protected RavenIdentityUser(string username)
@@ -77,7 +77,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenIdentityUser{TKey,TUserClaim,TUserLogin,TUserToken}"/> class.
+        /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
         /// </summary>
         protected RavenIdentityUser()
         {
