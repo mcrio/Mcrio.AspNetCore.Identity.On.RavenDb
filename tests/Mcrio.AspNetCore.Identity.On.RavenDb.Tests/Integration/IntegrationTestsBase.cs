@@ -1,9 +1,11 @@
+using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 using Mcrio.AspNetCore.Identity.On.RavenDb.RavenDb;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -26,17 +28,19 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             documentStore.Conventions.FindCollectionName = type =>
             {
                 if (IdentityRavenDbConventions.TryGetCollectionName(
-                    type,
-                    out string? collectionName))
+                        type,
+                        out string? collectionName))
                 {
                     return collectionName;
                 }
 
                 return DocumentConventions.DefaultGetCollectionName(type);
             };
+            documentStore.Conventions.UseOptimisticConcurrency = true;
         }
 
         protected ServiceScope InitializeServices(
+            Action<UniqueValuesReservationOptions>? uniqueValuesReservationOptionsConfig,
             bool requireUniqueEmail = false,
             bool protectPersonalData = false
         )
@@ -63,7 +67,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                     options.Stores.ProtectPersonalData = protectPersonalData;
                 })
                 .AddRavenDbStores<RavenUserStore, RavenRoleStore, RavenIdentityUser, RavenIdentityRole>(
-                    provider => provider.GetRequiredService<IAsyncDocumentSession>()
+                    provider => provider.GetRequiredService<IAsyncDocumentSession>(),
+                    uniqueValuesReservationOptionsConfig
                 )
                 .AddDefaultTokenProviders();
 
@@ -83,7 +88,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
         protected async Task AssertCompareExchangeKeyExistsAsync(string cmpExchangeKey, string because = "")
         {
-            IDocumentStore documentStore = InitializeServices().DocumentStore;
+            IDocumentStore documentStore = InitializeServices(
+                options => options.UseReservationDocumentsForUniqueValues = false
+            ).DocumentStore;
             CompareExchangeValue<string> result = await GetCompareExchangeAsync<string>(documentStore, cmpExchangeKey);
             result.Should().NotBeNull($"cmp exchange {cmpExchangeKey} should exist because {because}");
         }
@@ -93,7 +100,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             TValue value,
             string because = "")
         {
-            IDocumentStore documentStore = InitializeServices().DocumentStore;
+            IDocumentStore documentStore = InitializeServices(
+                options => options.UseReservationDocumentsForUniqueValues = false
+            ).DocumentStore;
             CompareExchangeValue<TValue> result = await GetCompareExchangeAsync<TValue>(documentStore, cmpExchangeKey);
             result.Should().NotBeNull($"cmp exchange {cmpExchangeKey} should exist because {because}");
             result.Value.Should().Be(value);
@@ -101,9 +110,50 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
         protected async Task AssertCompareExchangeKeyDoesNotExistAsync(string cmpExchangeKey, string because = "")
         {
-            IDocumentStore documentStore = InitializeServices().DocumentStore;
+            IDocumentStore documentStore = InitializeServices(
+                options => options.UseReservationDocumentsForUniqueValues = false
+            ).DocumentStore;
             CompareExchangeValue<string> result = await GetCompareExchangeAsync<string>(documentStore, cmpExchangeKey);
             result.Should().BeNull($"cmp exchange {cmpExchangeKey} should not exist because {because}");
+        }
+
+        protected async Task AssertReservationDocumentExistsWithValueAsync(
+            UniqueReservationType uniqueReservationType,
+            string expectedUniqueValue,
+            string expectedReferenceDocumentId,
+            string because = "")
+        {
+            ServiceScope scope = InitializeServices(
+                options => options.UseReservationDocumentsForUniqueValues = true
+            );
+            var uniqueUtility = new UniqueReservationDocumentUtility(
+                scope.DocumentSession,
+                uniqueReservationType,
+                expectedUniqueValue
+            );
+            bool exists = await uniqueUtility.CheckIfUniqueIsTakenAsync();
+            exists.Should().BeTrue(because);
+
+            UniqueReservation reservation = await uniqueUtility.LoadReservationAsync();
+            reservation.Should().NotBeNull();
+            reservation.ReferenceId.Should().Be(expectedReferenceDocumentId);
+        }
+
+        protected async Task AssertReservationDocumentDoesNotExistAsync(
+            UniqueReservationType uniqueReservationType,
+            string expectedUniqueValue,
+            string because = "")
+        {
+            ServiceScope scope = InitializeServices(
+                options => options.UseReservationDocumentsForUniqueValues = true
+            );
+            var uniqueUtility = new UniqueReservationDocumentUtility(
+                scope.DocumentSession,
+                uniqueReservationType,
+                expectedUniqueValue
+            );
+            bool exists = await uniqueUtility.CheckIfUniqueIsTakenAsync();
+            exists.Should().BeFalse(because);
         }
 
         private static Task<CompareExchangeValue<TValue>> GetCompareExchangeAsync<TValue>(

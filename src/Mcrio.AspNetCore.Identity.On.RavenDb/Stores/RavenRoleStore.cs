@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
@@ -14,6 +15,7 @@ using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 
@@ -28,18 +30,19 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <param name="documentSessionProvider">Identity Document session provider.</param>
         /// <param name="errorDescriber">Error describer.</param>
         /// <param name="logger">Logger.</param>
+        /// <param name="uniqueValuesReservationOptions">Unique values reservation options.</param>
         public RavenRoleStore(
             IdentityDocumentSessionProvider documentSessionProvider,
             IdentityErrorDescriber errorDescriber,
-            ILogger<RavenRoleStore> logger)
-            : base(documentSessionProvider, errorDescriber, logger)
+            ILogger<RavenRoleStore> logger,
+            UniqueValuesReservationOptions uniqueValuesReservationOptions)
+            : base(documentSessionProvider, errorDescriber, logger, uniqueValuesReservationOptions)
         {
         }
     }
 
     /// <inheritdoc />
-    public class RavenRoleStore<TRole, TUser> : RavenRoleStore<TRole, RavenIdentityClaim,
-        TUser, RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken>
+    public class RavenRoleStore<TRole, TUser> : RavenRoleStore<TRole, TUser, UniqueReservation>
         where TRole : RavenIdentityRole
         where TUser : RavenIdentityUser
     {
@@ -49,11 +52,53 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <param name="documentSessionProvider">Identity Document session provider.</param>
         /// <param name="errorDescriber">Error describer.</param>
         /// <param name="logger">Logger.</param>
-        public RavenRoleStore(
+        /// <param name="uniqueValuesReservationOptions">Unique values reservation options.</param>
+        protected RavenRoleStore(
             IdentityDocumentSessionProvider documentSessionProvider,
             IdentityErrorDescriber errorDescriber,
-            ILogger<RavenRoleStore<TRole, TUser>> logger)
-            : base(documentSessionProvider(), errorDescriber, logger)
+            ILogger<RavenRoleStore<TRole, TUser>> logger,
+            UniqueValuesReservationOptions uniqueValuesReservationOptions)
+            : base(documentSessionProvider, errorDescriber, logger, uniqueValuesReservationOptions)
+        {
+        }
+
+        /// <inheritdoc />
+        protected override UniqueReservationDocumentUtility<UniqueReservation> CreateUniqueReservationDocumentsUtility(
+            UniqueReservationType reservationType,
+            string uniqueValue)
+        {
+            Debug.Assert(
+                UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues,
+                "Expected reservation documents to be configured to use unique value reservation documents."
+            );
+            return new UniqueReservationDocumentUtility(
+                DocumentSession,
+                reservationType,
+                uniqueValue
+            );
+        }
+    }
+
+    /// <inheritdoc />
+    public abstract class RavenRoleStore<TRole, TUser, TUniqueReservation> : RavenRoleStore<TRole, RavenIdentityClaim,
+        TUser, RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken, TUniqueReservation>
+        where TRole : RavenIdentityRole
+        where TUser : RavenIdentityUser
+        where TUniqueReservation : UniqueReservation
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RavenRoleStore{TRole,TUser,TUniqueReservation}"/> class.
+        /// </summary>
+        /// <param name="documentSessionProvider">Identity Document session provider.</param>
+        /// <param name="errorDescriber">Error describer.</param>
+        /// <param name="logger">Logger.</param>
+        /// <param name="uniqueValuesReservationOptions">Unique values reservation options.</param>
+        protected RavenRoleStore(
+            IdentityDocumentSessionProvider documentSessionProvider,
+            IdentityErrorDescriber errorDescriber,
+            ILogger<RavenRoleStore<TRole, TUser, TUniqueReservation>> logger,
+            UniqueValuesReservationOptions uniqueValuesReservationOptions)
+            : base(documentSessionProvider(), errorDescriber, logger, uniqueValuesReservationOptions)
         {
             if (documentSessionProvider == null)
             {
@@ -77,7 +122,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
     /// <typeparam name="TUserClaim">User claim type.</typeparam>
     /// <typeparam name="TUserLogin">User login type.</typeparam>
     /// <typeparam name="TUserToken">User token type.</typeparam>
-    public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken> :
+    /// <typeparam name="TUniqueReservation">Unique values reservation document type.</typeparam>
+    public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken,
+        TUniqueReservation> :
         IRoleClaimStore<TRole>, IQueryableRoleStore<TRole>
         where TRole : RavenIdentityRole<TRoleClaim>
         where TRoleClaim : RavenIdentityClaim
@@ -85,23 +132,29 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         where TUserClaim : RavenIdentityClaim
         where TUserLogin : RavenIdentityUserLogin
         where TUserToken : RavenIdentityToken
+        where TUniqueReservation : UniqueReservation
     {
         private bool _disposed;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenRoleStore{TRole,TRoleClaim,TUser,TUserClaim,TUserLogin,TUserToken}"/> class.
+        /// Initializes a new instance of the <see cref="RavenRoleStore{TRole,TRoleClaim,TUser,TUserClaim,TUserLogin,TUserToken,TUniqueReservation}"/> class.
         /// </summary>
         /// <param name="documentSession">Document session.</param>
         /// <param name="errorDescriber">Error describer.</param>
         /// <param name="logger">Logger.</param>
+        /// <param name="uniqueValuesReservationOptions">Unique values reservation options.</param>
         protected RavenRoleStore(
             IAsyncDocumentSession documentSession,
             IdentityErrorDescriber errorDescriber,
-            ILogger<RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken>> logger)
+            ILogger<RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken, TUniqueReservation>>
+                logger,
+            UniqueValuesReservationOptions uniqueValuesReservationOptions)
         {
             DocumentSession = documentSession ?? throw new ArgumentNullException(nameof(documentSession));
             ErrorDescriber = errorDescriber ?? throw new ArgumentNullException(nameof(errorDescriber));
             Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            UniqueValuesReservationOptions = uniqueValuesReservationOptions ??
+                                             throw new ArgumentNullException(nameof(uniqueValuesReservationOptions));
         }
 
         /// <inheritdoc/>
@@ -128,8 +181,14 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <summary>
         /// Gets or sets the logger.
         /// </summary>
-        protected virtual ILogger<RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken>>
+        protected virtual ILogger<RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken,
+                TUniqueReservation>>
             Logger { get; }
+
+        /// <summary>
+        /// Gets the unique value representation options.
+        /// </summary>
+        protected UniqueValuesReservationOptions UniqueValuesReservationOptions { get; }
 
         /// <inheritdoc/>
         public virtual void Dispose() => _disposed = true;
@@ -154,26 +213,65 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
-            bool nameReservationResult = await compareExchangeUtility.CreateReservationAsync<string, TRole>(
-                CompareExchangeUtility.ReservationType.Role,
-                role,
-                role.NormalizedName
-            ).ConfigureAwait(false);
-            if (!nameReservationResult)
+            // cluster wide as we will deal with compare exchange values either directly or as atomic guards
+            // for unique value reservations
+            DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
+            DocumentSession.Advanced.UseOptimisticConcurrency =
+                false; // cluster wide tx doesn't support opt. concurrency
+
+            // no change vector as we rely on cluster wide optimistic concurrency and atomic guards
+            await DocumentSession
+                .StoreAsync(role, cancellationToken)
+                .ConfigureAwait(false);
+
+            // handle unique reservation
+            if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
             {
-                return IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.Name));
+                UniqueReservationDocumentUtility<TUniqueReservation> uniqueReservationUtil =
+                    CreateUniqueReservationDocumentsUtility(
+                        UniqueReservationType.Role,
+                        role.NormalizedName
+                    );
+                bool uniqueExists = await uniqueReservationUtil.CheckIfUniqueIsTakenAsync().ConfigureAwait(false);
+                if (uniqueExists)
+                {
+                    return IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.Name));
+                }
+
+                await uniqueReservationUtil
+                    .CreateReservationDocumentAddToUnitOfWorkAsync(role.Id)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
+                string compareExchangeKey = compareExchangeUtility.CreateCompareExchangeKey(
+                    UniqueReservationType.Role,
+                    role.NormalizedName
+                );
+                CompareExchangeValue<string>? existingCompareExchange = await DocumentSession
+                    .Advanced
+                    .ClusterTransaction
+                    .GetCompareExchangeValueAsync<string>(compareExchangeKey, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (existingCompareExchange != null)
+                {
+                    return IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.Name));
+                }
+
+                DocumentSession
+                    .Advanced
+                    .ClusterTransaction
+                    .CreateCompareExchangeValue(
+                        compareExchangeKey,
+                        role.Id
+                    );
             }
 
-            var saveSuccess = false;
             try
             {
-                // note: role.Id may be null as base class does not implement non-nullable reference types
-                await DocumentSession
-                    .StoreAsync(role, string.Empty, role.Id?.ToString(), cancellationToken)
-                    .ConfigureAwait(false);
                 await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                saveSuccess = true;
                 return IdentityResult.Success;
             }
             catch (ConcurrencyException)
@@ -184,23 +282,6 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             {
                 Logger.LogError(ex, "Failed reserving role name at the compare exchange. {}", ex.Message);
                 return IdentityResult.Failed(ErrorDescriber.DefaultError());
-            }
-            finally
-            {
-                if (!saveSuccess)
-                {
-                    bool removeResult = await compareExchangeUtility.RemoveReservationAsync(
-                        CompareExchangeUtility.ReservationType.Role,
-                        role,
-                        role.NormalizedName
-                    ).ConfigureAwait(false);
-                    if (!removeResult)
-                    {
-                        Logger.LogError(
-                            $"Failed removing role name '{role.NormalizedName}' from compare exchange "
-                        );
-                    }
-                }
             }
         }
 
@@ -213,6 +294,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             if (role == null)
             {
                 throw new ArgumentNullException(nameof(role));
+            }
+
+            if (!DocumentSession.Advanced.IsLoaded(role.Id))
+            {
+                throw new Exception("Role expected to be loaded in RavenDb unit of work prior to update");
             }
 
             if (string.IsNullOrWhiteSpace(role.Name))
@@ -231,24 +317,70 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             }
 
             // check if normalized name has changed, and if yes make sure it's unique by reserving it
-            PropertyChange<string>? normalizedNameChange = null;
+            if (DocumentSession.IfPropertyChanged(
+                    role,
+                    changedPropertyName: nameof(role.NormalizedName),
+                    newPropertyValue: role.NormalizedName,
+                    out PropertyChange<string>? propertyChange
+                ))
+            {
+                Debug.Assert(propertyChange != null, $"Unexpected NULL value for {nameof(propertyChange)}");
 
-            var saveSuccess = false;
+                // cluster wide as we will deal with compare exchange values either directly or as atomic guards
+                DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
+                DocumentSession.Advanced.UseOptimisticConcurrency =
+                    false; // cluster wide tx doesn't support opt. concurrency
+
+                if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
+                {
+                    UniqueReservationDocumentUtility<TUniqueReservation> uniqueReservationUtil =
+                        CreateUniqueReservationDocumentsUtility(
+                            UniqueReservationType.Role,
+                            role.NormalizedName
+                        );
+                    bool uniqueExists = await uniqueReservationUtil.CheckIfUniqueIsTakenAsync().ConfigureAwait(false);
+                    if (uniqueExists)
+                    {
+                        return IdentityResult.Failed(ErrorDescriber.DuplicateRoleName(role.Name));
+                    }
+
+                    await uniqueReservationUtil.UpdateReservationAndAddToUnitOfWork(
+                        oldUniqueValue: propertyChange.OldPropertyValue,
+                        ownerDocumentId: role.Id
+                    ).ConfigureAwait(false);
+                }
+                else
+                {
+                    CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
+                    IdentityError? reservationUpdateError = await compareExchangeUtility
+                        .PrepareReservationUpdateInUnitOfWorkAsync(
+                            UniqueReservationType.Role,
+                            role.NormalizedName,
+                            propertyChange.OldPropertyValue,
+                            role.Id,
+                            ErrorDescriber,
+                            Logger,
+                            cancellationToken
+                        ).ConfigureAwait(false);
+                    if (reservationUpdateError != null)
+                    {
+                        return IdentityResult.Failed(reservationUpdateError);
+                    }
+                }
+            }
+
             try
             {
-                normalizedNameChange = await ReserveIfRoleNameChangedAsync(role).ConfigureAwait(false);
+                // in cluster wide mode relying on optimistic concurrency using atomic guards
+                if (((AsyncDocumentSession)DocumentSession).TransactionMode != TransactionMode.ClusterWide)
+                {
+                    string changeVector = DocumentSession.Advanced.GetChangeVectorFor(role);
+                    await DocumentSession
+                        .StoreAsync(role, changeVector, role.Id, cancellationToken)
+                        .ConfigureAwait(false);
+                }
 
-                string changeVector = DocumentSession.Advanced.GetChangeVectorFor(role);
-                await DocumentSession
-                    .StoreAsync(role, changeVector, role.Id, cancellationToken)
-                    .ConfigureAwait(false);
                 await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                saveSuccess = true;
-            }
-            catch (UniqueValueExistsException ex)
-            {
-                Logger.LogInformation(ex, $"Failed reserving unique value: {ex.Message}");
-                return IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
             }
             catch (ConcurrencyException)
             {
@@ -258,28 +390,6 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             {
                 Logger.LogError(ex, "Failed updating role. {}", ex.Message);
                 return IdentityResult.Failed(ErrorDescriber.DefaultError());
-            }
-            finally
-            {
-                if (normalizedNameChange != null)
-                {
-                    CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
-                    string reservationToRemove =
-                        saveSuccess
-                            ? normalizedNameChange.OldPropertyValue
-                            : normalizedNameChange.NewPropertyValue;
-                    bool removeResult = await compareExchangeUtility.RemoveReservationAsync(
-                        CompareExchangeUtility.ReservationType.Role,
-                        role,
-                        reservationToRemove
-                    ).ConfigureAwait(false);
-                    if (!removeResult)
-                    {
-                        Logger.LogError(
-                            $"Failed removing role name '{reservationToRemove}' from compare exchange "
-                        );
-                    }
-                }
             }
 
             return IdentityResult.Success;
@@ -307,42 +417,47 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 );
             if (userInRoleCount > 0)
             {
-                return IdentityResult.Failed(new IdentityError
-                {
-                    Code = "UsersInRole",
-                    Description = "There are users assigned to this role.",
-                });
+                return IdentityResult.Failed(
+                    new IdentityError
+                    {
+                        Code = "UsersInRole",
+                        Description = "There are users assigned to this role.",
+                    });
             }
 
-            string? changeVector = DocumentSession.Advanced.GetChangeVectorFor(role);
-            var saveSuccess = false;
+            // cluster wide as we will deal with compare exchange values either directly or as atomic guards
+            DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
+            DocumentSession.Advanced.UseOptimisticConcurrency =
+                false; // cluster wide tx doesn't support opt. concurrency
+
+            if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
+            {
+                UniqueReservationDocumentUtility<TUniqueReservation> uniqueReservationUtil =
+                    CreateUniqueReservationDocumentsUtility(
+                        UniqueReservationType.Role,
+                        role.NormalizedName
+                    );
+                await uniqueReservationUtil.MarkReservationForDeletionAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
+                await compareExchangeUtility.PrepareReservationForRemovalAsync(
+                    UniqueReservationType.Role,
+                    role.NormalizedName,
+                    Logger,
+                    cancellationToken
+                ).ConfigureAwait(false);
+            }
+
             try
             {
-                DocumentSession.Delete(role.Id, changeVector);
+                DocumentSession.Delete(role.Id);
                 await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                saveSuccess = true;
             }
             catch (ConcurrencyException)
             {
                 return IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
-            }
-            finally
-            {
-                if (saveSuccess)
-                {
-                    CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
-                    bool removeResult = await compareExchangeUtility.RemoveReservationAsync(
-                        CompareExchangeUtility.ReservationType.Role,
-                        role,
-                        role.NormalizedName
-                    ).ConfigureAwait(false);
-                    if (!removeResult)
-                    {
-                        Logger.LogError(
-                            $"Failed removing role name '{role.NormalizedName}' from compare exchange "
-                        );
-                    }
-                }
             }
 
             return IdentityResult.Success;
@@ -548,32 +663,26 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         }
 
         /// <summary>
-        /// If there is a property change that requires uniqueness check, make a new compare exchange
-        /// reservation or throw if unique value already exists.
-        /// </summary>
-        /// <param name="role">Role.</param>
-        /// <returns>Optional property change data if there was a property change and
-        /// a successful new compare exchange reservation made.</returns>
-        /// <exception cref="UniqueValueExistsException">If new unique value already exists.</exception>
-        protected virtual Task<PropertyChange<string>?> ReserveIfRoleNameChangedAsync(TRole role)
-        {
-            return DocumentSession.ReserveIfPropertyChangedAsync(
-                CreateCompareExchangeUtility(),
-                role,
-                nameof(role.NormalizedName),
-                role.NormalizedName,
-                role.NormalizedName,
-                CompareExchangeUtility.ReservationType.Role
-            );
-        }
-
-        /// <summary>
         /// Compare exchange utility factory.
         /// </summary>
         /// <returns>An instance of <see cref="CompareExchangeUtility"/>.</returns>
         protected virtual CompareExchangeUtility CreateCompareExchangeUtility()
         {
+            Debug.Assert(
+                !UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues,
+                "Expected compare exchange values to be configured for unique value reservations."
+            );
             return new CompareExchangeUtility(DocumentSession);
         }
+
+        /// <summary>
+        /// Create an instance of <see cref="UniqueReservationDocumentUtility"/>.
+        /// </summary>
+        /// <param name="reservationType"></param>
+        /// <param name="uniqueValue"></param>
+        /// <returns>Instance of <see cref="UniqueReservationDocumentUtility"/>.</returns>
+        protected abstract UniqueReservationDocumentUtility<TUniqueReservation> CreateUniqueReservationDocumentsUtility(
+            UniqueReservationType reservationType,
+            string uniqueValue);
     }
 }

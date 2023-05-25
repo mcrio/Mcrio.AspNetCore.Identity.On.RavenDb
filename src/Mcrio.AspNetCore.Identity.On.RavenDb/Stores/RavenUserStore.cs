@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
@@ -32,19 +33,20 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <param name="describer">Error describer.</param>
         /// <param name="optionsAccessor">Identity options accessor.</param>
         /// <param name="logger">Logger.</param>
+        /// <param name="uniqueValuesReservationOptions">Unique values reservation options.</param>
         public RavenUserStore(
             IdentityDocumentSessionProvider identityDocumentSessionProvider,
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
-            ILogger<RavenUserStore> logger)
-            : base(identityDocumentSessionProvider, describer, optionsAccessor, logger)
+            ILogger<RavenUserStore> logger,
+            UniqueValuesReservationOptions uniqueValuesReservationOptions)
+            : base(identityDocumentSessionProvider, describer, optionsAccessor, logger, uniqueValuesReservationOptions)
         {
         }
     }
 
     /// <inheritdoc />
-    public class RavenUserStore<TUser, TRole> : RavenUserStore<TUser, RavenIdentityClaim,
-        RavenIdentityToken, RavenIdentityUserLogin, TRole, RavenIdentityClaim>
+    public class RavenUserStore<TUser, TRole> : RavenUserStore<TUser, TRole, UniqueReservation>
         where TUser : RavenIdentityUser
         where TRole : RavenIdentityRole
     {
@@ -55,12 +57,66 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <param name="describer">Error describer.</param>
         /// <param name="optionsAccessor">Identity options accessor.</param>
         /// <param name="logger">Logger.</param>
+        /// <param name="uniqueValuesReservationOptions">Unique values reservation options.</param>
         public RavenUserStore(
             IdentityDocumentSessionProvider identityDocumentSessionProvider,
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
-            ILogger<RavenUserStore<TUser, TRole>> logger)
-            : base(identityDocumentSessionProvider(), describer, optionsAccessor, logger)
+            ILogger<RavenUserStore<TUser, TRole>> logger,
+            UniqueValuesReservationOptions uniqueValuesReservationOptions)
+            : base(
+                identityDocumentSessionProvider,
+                describer,
+                optionsAccessor,
+                logger,
+                uniqueValuesReservationOptions)
+        {
+        }
+
+        /// <inheritdoc />
+        protected override UniqueReservationDocumentUtility<UniqueReservation> CreateUniqueReservationDocumentsUtility(
+            UniqueReservationType reservationType,
+            string uniqueValue)
+        {
+            Debug.Assert(
+                UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues,
+                "Expected reservation documents to be configured for unique value reservations."
+            );
+            return new UniqueReservationDocumentUtility(
+                DocumentSession,
+                reservationType,
+                uniqueValue
+            );
+        }
+    }
+
+    /// <inheritdoc />
+    public abstract class RavenUserStore<TUser, TRole, TUniqueReservation> : RavenUserStore<TUser, RavenIdentityClaim,
+        RavenIdentityToken, RavenIdentityUserLogin, TRole, RavenIdentityClaim, TUniqueReservation>
+        where TUser : RavenIdentityUser
+        where TRole : RavenIdentityRole
+        where TUniqueReservation : UniqueReservation
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TRole,TUniqueReservation}"/> class.
+        /// </summary>
+        /// <param name="identityDocumentSessionProvider">Identity document session provider.</param>
+        /// <param name="describer">Error describer.</param>
+        /// <param name="optionsAccessor">Identity options accessor.</param>
+        /// <param name="logger">Logger.</param>
+        /// <param name="uniqueValuesReservationOptions">Unique values reservation options.</param>
+        protected RavenUserStore(
+            IdentityDocumentSessionProvider identityDocumentSessionProvider,
+            IdentityErrorDescriber describer,
+            IOptions<IdentityOptions> optionsAccessor,
+            ILogger<RavenUserStore<TUser, TRole, TUniqueReservation>> logger,
+            UniqueValuesReservationOptions uniqueValuesReservationOptions)
+            : base(
+                identityDocumentSessionProvider(),
+                describer,
+                optionsAccessor,
+                logger,
+                uniqueValuesReservationOptions)
         {
         }
 
@@ -92,37 +148,42 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
     }
 
     /// <inheritdoc />
-    public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim>
+    public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim,
+            TUniqueReservation>
         : RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim, IdentityUserClaim<string>,
             IdentityUserRole<string>, IdentityUserLogin<string>, IdentityUserToken<string>,
-            IdentityRoleClaim<string>>
+            IdentityRoleClaim<string>, TUniqueReservation>
         where TUser : RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
         where TRole : RavenIdentityRole<TRoleClaim>
         where TUserClaim : RavenIdentityClaim
         where TRoleClaim : RavenIdentityClaim
         where TUserToken : RavenIdentityToken
         where TUserLogin : RavenIdentityUserLogin
+        where TUniqueReservation : UniqueReservation
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim}"/> class.
+        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim,TUniqueReservation}"/> class.
         /// </summary>
         /// <param name="documentSession">Document session.</param>
         /// <param name="describer">Error describer.</param>
         /// <param name="optionsAccessor">Identity options accessor.</param>
         /// <param name="logger">Logger.</param>
+        /// <param name="uniqueValuesReservationOptions">Unique values reservation options.</param>
         protected RavenUserStore(
             IAsyncDocumentSession documentSession,
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
-            ILogger<RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim>> logger)
-            : base(documentSession, describer, optionsAccessor, logger)
+            ILogger<RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim, TUniqueReservation>>
+                logger,
+            UniqueValuesReservationOptions uniqueValuesReservationOptions)
+            : base(documentSession, describer, optionsAccessor, logger, uniqueValuesReservationOptions)
         {
         }
     }
 
     /// <inheritdoc />
     public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim,
-        TAspUserClaim, TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim> :
+        TAspUserClaim, TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim, TUniqueReservation> :
         UserStoreBase<TUser, TRole, string, TAspUserClaim, TAspUserRole, TAspUserLogin,
             TAspUserToken, TAspRoleClaim>
         where TUser : RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
@@ -136,52 +197,42 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         where TAspUserLogin : IdentityUserLogin<string>, new()
         where TAspUserToken : IdentityUserToken<string>, new()
         where TAspRoleClaim : IdentityRoleClaim<string>, new()
+        where TUniqueReservation : UniqueReservation
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim,TAspUserClaim,TAspUserRole,TAspUserLogin,TAspUserToken,TAspRoleClaim}"/> class.
+        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim,TAspUserClaim,TAspUserRole,TAspUserLogin,TAspUserToken,TAspRoleClaim,TUniqueReservation}"/> class.
         /// </summary>
         /// <param name="documentSession">Document session.</param>
         /// <param name="describer">Error describer.</param>
         /// <param name="optionsAccessor">Identity options accessor.</param>
         /// <param name="logger">Logger.</param>
+        /// <param name="uniqueValuesReservationOptions">Unique values reservation options.</param>
         protected RavenUserStore(
             IAsyncDocumentSession documentSession,
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
             ILogger<RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim, TAspUserClaim,
-                    TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim>>
-                logger)
+                    TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim, TUniqueReservation>>
+                logger,
+            UniqueValuesReservationOptions uniqueValuesReservationOptions)
             : base(describer)
         {
             DocumentSession = documentSession ?? throw new ArgumentNullException(nameof(documentSession));
             OptionsAccessor = optionsAccessor;
             Logger = logger;
-        }
-
-        /// <summary>
-        /// User properties that may require unique value.
-        /// </summary>
-        protected enum UniqueUserPropertyChangeType
-        {
-            /// <summary>
-            /// Username property unique value change.
-            /// </summary>
-            Username,
-
-            /// <summary>
-            /// Email property unique value change.
-            /// </summary>
-            Email,
+            UniqueValuesReservationOptions = uniqueValuesReservationOptions;
         }
 
         /// <inheritdoc/>
         public override IQueryable<TUser> Users => DocumentSession.Query<TUser>();
 
         /// <summary>
-        /// Gets or sets a flag indicating if changes should be persisted after CreateAsync, UpdateAsync and DeleteAsync are called.
+        /// Indicates if changes should be persisted to DB
+        /// after CreateAsync, UpdateAsync, DeleteAsync, AddLoginAsync, RemoveLoginAsync method are called.
         /// </summary>
         /// <value>
-        /// True if changes should be automatically persisted, otherwise false.
+        /// TRUE if changes should be persisted after CreateAsync, UpdateAsync, DeleteAsync,
+        /// AddLoginAsync or RemoveLoginAsync, FALSE otherwise.
         /// </value>
         public virtual bool AutoSaveChanges { get; set; } = true;
 
@@ -200,7 +251,12 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// </summary>
         protected ILogger<RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim,
             TAspUserClaim,
-            TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim>> Logger { get; }
+            TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim, TUniqueReservation>> Logger { get; }
+
+        /// <summary>
+        /// Gets the unique value representation options.
+        /// </summary>
+        protected UniqueValuesReservationOptions UniqueValuesReservationOptions { get; }
 
         /// <summary>
         /// Creates a new user.
@@ -224,59 +280,126 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
+            // cluster wide as we will deal with compare exchange values either directly or as atomic guards
+            // for unique value reservations
+            DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
+            DocumentSession.Advanced.UseOptimisticConcurrency = false; // cluster wide tx doesn't support opt. concurrency
 
-            // Reserve username
-            bool usernameReservationResult = await compareExchangeUtility.CreateReservationAsync<string, TUser>(
-                CompareExchangeUtility.ReservationType.Username,
-                user,
-                user.NormalizedUserName
-            ).ConfigureAwait(false);
-            if (!usernameReservationResult)
+            // no change vector as we rely on cluster wide optimistic concurrency and atomic guards
+            await DocumentSession
+                .StoreAsync(user, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
             {
-                return IdentityResult.Failed(ErrorDescriber.DuplicateUserName(user.UserName));
-            }
-
-            // reserve email if unique email required
-            var emailReservationResult = false;
-            if (OptionsAccessor.Value.User.RequireUniqueEmail)
-            {
-                if (string.IsNullOrWhiteSpace(user.NormalizedEmail))
+                // reserve username
                 {
-                    throw new ArgumentNullException(nameof(user.NormalizedEmail));
-                }
-
-                emailReservationResult = await compareExchangeUtility.CreateReservationAsync<string, TUser>(
-                    CompareExchangeUtility.ReservationType.Email,
-                    user,
-                    user.NormalizedEmail
-                ).ConfigureAwait(false);
-                if (!emailReservationResult)
-                {
-                    bool removeResult = await compareExchangeUtility.RemoveReservationAsync(
-                        CompareExchangeUtility.ReservationType.Username,
-                        user,
-                        user.NormalizedUserName
-                    ).ConfigureAwait(false);
-                    if (!removeResult)
-                    {
-                        Logger.LogError(
-                            $"Failed removing username '{user.NormalizedUserName}' from compare exchange "
+                    UniqueReservationDocumentUtility<TUniqueReservation> uniqueReservationUtil =
+                        CreateUniqueReservationDocumentsUtility(
+                            UniqueReservationType.Username,
+                            user.NormalizedUserName
                         );
+                    bool uniqueExists = await uniqueReservationUtil.CheckIfUniqueIsTakenAsync().ConfigureAwait(false);
+                    if (uniqueExists)
+                    {
+                        return IdentityResult.Failed(ErrorDescriber.DuplicateUserName(user.UserName));
                     }
 
-                    return IdentityResult.Failed(ErrorDescriber.DuplicateEmail(user.Email));
+                    await uniqueReservationUtil
+                        .CreateReservationDocumentAddToUnitOfWorkAsync(user.Id)
+                        .ConfigureAwait(false);
+                }
+
+                // reserve email if required
+                if (OptionsAccessor.Value.User.RequireUniqueEmail)
+                {
+                    if (string.IsNullOrWhiteSpace(user.NormalizedEmail))
+                    {
+                        throw new ArgumentNullException(nameof(user.NormalizedEmail));
+                    }
+
+                    UniqueReservationDocumentUtility<TUniqueReservation> uniqueReservationUtil =
+                        CreateUniqueReservationDocumentsUtility(
+                            UniqueReservationType.Email,
+                            user.NormalizedEmail
+                        );
+                    bool uniqueExists = await uniqueReservationUtil.CheckIfUniqueIsTakenAsync().ConfigureAwait(false);
+                    if (uniqueExists)
+                    {
+                        return IdentityResult.Failed(ErrorDescriber.DuplicateEmail(user.Email));
+                    }
+
+                    await uniqueReservationUtil
+                        .CreateReservationDocumentAddToUnitOfWorkAsync(user.Id)
+                        .ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
+                {
+                    // reserve username
+                    string usernameCompareExchangeKey = compareExchangeUtility.CreateCompareExchangeKey(
+                        UniqueReservationType.Username,
+                        user.NormalizedUserName
+                    );
+                    CompareExchangeValue<string>? existingUsernameCompareExchange = await DocumentSession
+                        .Advanced
+                        .ClusterTransaction
+                        .GetCompareExchangeValueAsync<string>(usernameCompareExchangeKey, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    if (existingUsernameCompareExchange != null)
+                    {
+                        return IdentityResult.Failed(ErrorDescriber.DuplicateUserName(user.UserName));
+                    }
+
+                    DocumentSession
+                        .Advanced
+                        .ClusterTransaction
+                        .CreateCompareExchangeValue(
+                            usernameCompareExchangeKey,
+                            user.Id
+                        );
+                }
+
+                // reserve email if unique email required
+                if (OptionsAccessor.Value.User.RequireUniqueEmail)
+                {
+                    if (string.IsNullOrWhiteSpace(user.NormalizedEmail))
+                    {
+                        throw new ArgumentNullException(nameof(user.NormalizedEmail));
+                    }
+
+                    string emailCompareExchangeKey = compareExchangeUtility.CreateCompareExchangeKey(
+                        UniqueReservationType.Email,
+                        user.NormalizedEmail
+                    );
+
+                    CompareExchangeValue<string>? existingEmailCompareExchange = await DocumentSession
+                        .Advanced
+                        .ClusterTransaction
+                        .GetCompareExchangeValueAsync<string>(emailCompareExchangeKey, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    if (existingEmailCompareExchange != null)
+                    {
+                        return IdentityResult.Failed(ErrorDescriber.DuplicateEmail(user.Email));
+                    }
+
+                    DocumentSession
+                        .Advanced
+                        .ClusterTransaction
+                        .CreateCompareExchangeValue(
+                            emailCompareExchangeKey,
+                            user.Id
+                        );
                 }
             }
 
-            var saveSuccess = false;
             try
             {
-                await DocumentSession
-                    .StoreAsync(user, string.Empty, user.Id, cancellationToken)
-                    .ConfigureAwait(false);
                 await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                saveSuccess = true;
                 return IdentityResult.Success;
             }
             catch (ConcurrencyException)
@@ -287,40 +410,6 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             {
                 Logger.LogError(ex, "Failed creating user {}", ex.Message);
                 return IdentityResult.Failed(ErrorDescriber.DefaultError());
-            }
-            finally
-            {
-                if (!saveSuccess)
-                {
-                    // remove username reservations
-                    bool removeUsernameCmpE = await compareExchangeUtility.RemoveReservationAsync(
-                        CompareExchangeUtility.ReservationType.Username,
-                        user,
-                        user.NormalizedUserName
-                    ).ConfigureAwait(false);
-                    if (!removeUsernameCmpE)
-                    {
-                        Logger.LogError(
-                            $"Failed removing username '{user.NormalizedUserName}' from compare exchange "
-                        );
-                    }
-
-                    if (emailReservationResult)
-                    {
-                        // remove email reservations
-                        bool removeEmailCmpE = await compareExchangeUtility.RemoveReservationAsync(
-                            CompareExchangeUtility.ReservationType.Email,
-                            user,
-                            user.NormalizedEmail!
-                        ).ConfigureAwait(false);
-                        if (!removeEmailCmpE)
-                        {
-                            Logger.LogError(
-                                $"Failed removing email '{user.NormalizedEmail}' from compare exchange "
-                            );
-                        }
-                    }
-                }
             }
         }
 
@@ -341,39 +430,130 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 throw new Exception("User is expected to be already loaded in the RavenDB session.");
             }
 
-            // if username has changed, and if yes make sure it's unique by reserving it
-            PropertyChange<string>? normalizedUsernameChange = null;
-
-            // if email has changed and if we require unique emails
-            PropertyChange<string>? normalizedEmailChange = null;
-
-            string? changeVector = DocumentSession.Advanced.GetChangeVectorFor(user);
-
-            var saveSuccess = false;
-            try
-            {
-                normalizedUsernameChange = await ReserveIfUserPropertyChangedAsync(
+            // if username has changed make sure it's unique by reserving it
+            if (DocumentSession.IfPropertyChanged(
                     user,
-                    UniqueUserPropertyChangeType.Username
-                ).ConfigureAwait(false);
+                    changedPropertyName: nameof(user.NormalizedUserName),
+                    newPropertyValue: user.NormalizedUserName,
+                    out PropertyChange<string>? usernamePropertyChange
+                ))
+            {
+                Debug.Assert(
+                    usernamePropertyChange != null,
+                    $"Unexpected NULL value for {nameof(usernamePropertyChange)}");
 
-                if (OptionsAccessor.Value.User.RequireUniqueEmail)
+                // cluster wide as we will deal with compare exchange values either directly or as atomic guards
+                DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
+                DocumentSession.Advanced.UseOptimisticConcurrency = false; // cluster wide tx doesn't support opt. concurrency
+
+                if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
                 {
-                    normalizedEmailChange = await ReserveIfUserPropertyChangedAsync(
-                        user,
-                        UniqueUserPropertyChangeType.Email
+                    UniqueReservationDocumentUtility<TUniqueReservation> uniqueReservationUtil =
+                        CreateUniqueReservationDocumentsUtility(
+                            UniqueReservationType.Username,
+                            user.NormalizedUserName
+                        );
+                    bool uniqueExists = await uniqueReservationUtil.CheckIfUniqueIsTakenAsync().ConfigureAwait(false);
+                    if (uniqueExists)
+                    {
+                        return IdentityResult.Failed(ErrorDescriber.DuplicateUserName(user.UserName));
+                    }
+
+                    await uniqueReservationUtil.UpdateReservationAndAddToUnitOfWork(
+                        usernamePropertyChange.OldPropertyValue,
+                        user.Id
                     ).ConfigureAwait(false);
                 }
+                else
+                {
+                    CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
 
-                await DocumentSession.StoreAsync(user, changeVector, user.Id, cancellationToken)
-                    .ConfigureAwait(false);
-                await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                saveSuccess = true;
+                    IdentityError? reservationUpdateError = await compareExchangeUtility
+                        .PrepareReservationUpdateInUnitOfWorkAsync(
+                            uniqueReservationType: UniqueReservationType.Username,
+                            newUniqueValueNormalized: user.NormalizedUserName,
+                            oldUniqueValueNormalized: usernamePropertyChange.OldPropertyValue,
+                            compareExchangeValue: user.Id,
+                            errorDescriber: ErrorDescriber,
+                            logger: Logger,
+                            cancellationToken: cancellationToken
+                        ).ConfigureAwait(false);
+                    if (reservationUpdateError != null)
+                    {
+                        return IdentityResult.Failed(reservationUpdateError);
+                    }
+                }
             }
-            catch (UniqueValueExistsException ex)
+
+            // if email has changed and if we require unique emails
+            if (DocumentSession.IfPropertyChanged(
+                    user,
+                    changedPropertyName: nameof(user.NormalizedEmail),
+                    newPropertyValue: user.NormalizedEmail,
+                    out PropertyChange<string>? emailPropertyChange
+                )
+                && OptionsAccessor.Value.User.RequireUniqueEmail)
             {
-                Logger.LogInformation(ex, $"Failed reserving unique value: {ex.Message}");
-                return IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
+                Debug.Assert(emailPropertyChange != null, $"Unexpected NULL value for {nameof(emailPropertyChange)}");
+
+                // cluster wide as we will deal with compare exchange values either directly or as atomic guards
+                DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
+                DocumentSession.Advanced.UseOptimisticConcurrency = false; // cluster wide tx doesn't support opt. concurrency
+
+                if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
+                {
+                    UniqueReservationDocumentUtility<TUniqueReservation> uniqueReservationUtil =
+                        CreateUniqueReservationDocumentsUtility(
+                            UniqueReservationType.Email,
+                            user.NormalizedEmail
+                        );
+                    bool uniqueExists = await uniqueReservationUtil.CheckIfUniqueIsTakenAsync().ConfigureAwait(false);
+                    if (uniqueExists)
+                    {
+                        return IdentityResult.Failed(ErrorDescriber.DuplicateEmail(user.Email));
+                    }
+
+                    await uniqueReservationUtil
+                        .UpdateReservationAndAddToUnitOfWork(
+                            emailPropertyChange.OldPropertyValue,
+                            user.Id
+                        )
+                        .ConfigureAwait(false);
+                }
+                else
+                {
+                    CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
+
+                    IdentityError? reservationUpdateError = await compareExchangeUtility
+                        .PrepareReservationUpdateInUnitOfWorkAsync(
+                            uniqueReservationType: UniqueReservationType.Email,
+                            newUniqueValueNormalized: user.NormalizedEmail,
+                            oldUniqueValueNormalized: emailPropertyChange.OldPropertyValue,
+                            compareExchangeValue: user.Id,
+                            errorDescriber: ErrorDescriber,
+                            logger: Logger,
+                            cancellationToken: cancellationToken
+                        ).ConfigureAwait(false);
+                    if (reservationUpdateError != null)
+                    {
+                        return IdentityResult.Failed(reservationUpdateError);
+                    }
+                }
+            }
+
+            // in cluster wide mode relying on atomic guards for optimistic concurrency
+            if (((AsyncDocumentSession)DocumentSession).TransactionMode != TransactionMode.ClusterWide)
+            {
+                string changeVector = DocumentSession.Advanced.GetChangeVectorFor(user);
+                await DocumentSession
+                    .StoreAsync(user, changeVector, user.Id, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            try
+            {
+                await DocumentSession.StoreAsync(user, cancellationToken).ConfigureAwait(false);
+                await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (ConcurrencyException)
             {
@@ -383,46 +563,6 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             {
                 Logger.LogError(ex, "Failed updating user {} {}", user.UserName, ex.Message);
                 return IdentityResult.Failed(ErrorDescriber.DefaultError());
-            }
-            finally
-            {
-                CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
-
-                if (normalizedUsernameChange != null)
-                {
-                    string usernameReservationToRemove = saveSuccess
-                        ? normalizedUsernameChange.OldPropertyValue
-                        : normalizedUsernameChange.NewPropertyValue;
-                    bool removeResult = await compareExchangeUtility.RemoveReservationAsync(
-                        CompareExchangeUtility.ReservationType.Username,
-                        user,
-                        usernameReservationToRemove
-                    ).ConfigureAwait(false);
-                    if (!removeResult)
-                    {
-                        Logger.LogError(
-                            $"Failed removing username '{usernameReservationToRemove}' from compare exchange "
-                        );
-                    }
-                }
-
-                if (normalizedEmailChange != null)
-                {
-                    string emailReservationToRemove = saveSuccess
-                        ? normalizedEmailChange.OldPropertyValue
-                        : normalizedEmailChange.NewPropertyValue;
-                    bool removeResult = await compareExchangeUtility.RemoveReservationAsync(
-                        CompareExchangeUtility.ReservationType.Email,
-                        user,
-                        emailReservationToRemove
-                    ).ConfigureAwait(false);
-                    if (!removeResult)
-                    {
-                        Logger.LogError(
-                            $"Failed removing email '{emailReservationToRemove}' from compare exchange "
-                        );
-                    }
-                }
             }
 
             return IdentityResult.Success;
@@ -450,14 +590,55 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 throw new Exception("User is expected to be already loaded in the RavenDB session.");
             }
 
-            string? changeVector = DocumentSession.Advanced.GetChangeVectorFor(user);
+            // cluster wide as we will deal with compare exchange values either directly or as atomic guards
+            DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
+            DocumentSession.Advanced.UseOptimisticConcurrency = false; // cluster wide tx doesn't support opt. concurrency
 
-            var saveSuccess = false;
+            if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
+            {
+                UniqueReservationDocumentUtility<TUniqueReservation> usernameReservationUtil =
+                    CreateUniqueReservationDocumentsUtility(
+                        UniqueReservationType.Username,
+                        user.NormalizedUserName
+                    );
+                await usernameReservationUtil.MarkReservationForDeletionAsync().ConfigureAwait(false);
+
+                if (OptionsAccessor.Value.User.RequireUniqueEmail)
+                {
+                    UniqueReservationDocumentUtility<TUniqueReservation> emailReservationUtil =
+                        CreateUniqueReservationDocumentsUtility(
+                            UniqueReservationType.Email,
+                            user.NormalizedEmail
+                        );
+                    await emailReservationUtil.MarkReservationForDeletionAsync().ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
+
+                await compareExchangeUtility.PrepareReservationForRemovalAsync(
+                    UniqueReservationType.Username,
+                    user.NormalizedUserName,
+                    Logger,
+                    cancellationToken
+                ).ConfigureAwait(false);
+
+                if (OptionsAccessor.Value.User.RequireUniqueEmail)
+                {
+                    await compareExchangeUtility.PrepareReservationForRemovalAsync(
+                        UniqueReservationType.Email,
+                        user.NormalizedEmail!,
+                        Logger,
+                        cancellationToken
+                    ).ConfigureAwait(false);
+                }
+            }
+
             try
             {
-                DocumentSession.Delete(user.Id, changeVector);
+                DocumentSession.Delete(user.Id);
                 await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                saveSuccess = true;
             }
             catch (ConcurrencyException)
             {
@@ -467,42 +648,6 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             {
                 Logger.LogError(ex, "Failed deleting user {} {}", user.UserName, ex.Message);
                 return IdentityResult.Failed(ErrorDescriber.DefaultError());
-            }
-            finally
-            {
-                if (saveSuccess)
-                {
-                    CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
-
-                    // remove username reservations
-                    bool removeUsernameCmpE = await compareExchangeUtility.RemoveReservationAsync(
-                        CompareExchangeUtility.ReservationType.Username,
-                        user,
-                        user.NormalizedUserName
-                    ).ConfigureAwait(false);
-                    if (!removeUsernameCmpE)
-                    {
-                        Logger.LogError(
-                            $"Failed removing username '{user.NormalizedUserName}' from compare exchange "
-                        );
-                    }
-
-                    if (OptionsAccessor.Value.User.RequireUniqueEmail)
-                    {
-                        // remove email reservations
-                        bool removeEmailCmpE = await compareExchangeUtility.RemoveReservationAsync(
-                            CompareExchangeUtility.ReservationType.Email,
-                            user,
-                            user.NormalizedEmail!
-                        ).ConfigureAwait(false);
-                        if (!removeEmailCmpE)
-                        {
-                            Logger.LogError(
-                                $"Failed removing email '{user.NormalizedEmail}' from compare exchange "
-                            );
-                        }
-                    }
-                }
             }
 
             return IdentityResult.Success;
@@ -691,20 +836,65 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 return;
             }
 
-            CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
-            bool loginReservation = await compareExchangeUtility.CreateReservationAsync(
-                CompareExchangeUtility.ReservationType.Login,
-                user,
-                CreateLoginReservationUniqueValue(userLogin.LoginProvider, userLogin.ProviderKey),
-                user.Id
-            ).ConfigureAwait(false);
+            // cluster wide as we will deal with compare exchange values either directly or as atomic guards
+            DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
+            DocumentSession.Advanced.UseOptimisticConcurrency = false; // cluster wide tx doesn't support opt. concurrency
 
-            if (!loginReservation)
+            if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
             {
-                return;
+                UniqueReservationDocumentUtility<TUniqueReservation> uniqueReservationUtil =
+                    CreateUniqueReservationDocumentsUtility(
+                        UniqueReservationType.Login,
+                        CreateLoginReservationUniqueValue(userLogin.LoginProvider, userLogin.ProviderKey)
+                    );
+                bool uniqueExists = await uniqueReservationUtil.CheckIfUniqueIsTakenAsync().ConfigureAwait(false);
+                if (uniqueExists)
+                {
+                    return;
+                }
+
+                await uniqueReservationUtil
+                    .CreateReservationDocumentAddToUnitOfWorkAsync(user.Id)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
+                string loginCompareExchangeKey = compareExchangeUtility.CreateCompareExchangeKey(
+                    UniqueReservationType.Login,
+                    CreateLoginReservationUniqueValue(userLogin.LoginProvider, userLogin.ProviderKey)
+                );
+                CompareExchangeValue<string>? existingLoginCompareExchange = await DocumentSession
+                    .Advanced
+                    .ClusterTransaction
+                    .GetCompareExchangeValueAsync<string>(loginCompareExchangeKey, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (existingLoginCompareExchange != null)
+                {
+                    return;
+                }
+
+                DocumentSession
+                    .Advanced
+                    .ClusterTransaction
+                    .CreateCompareExchangeValue(
+                        loginCompareExchangeKey,
+                        user.Id
+                    );
             }
 
             user.AddLogin(userLogin);
+
+            try
+            {
+                await DocumentSession.StoreAsync(user, cancellationToken).ConfigureAwait(false);
+                await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed adding login for user {}", user.Id);
+            }
         }
 
         /// <inheritdoc/>
@@ -736,51 +926,58 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 throw new Exception("User is expected to be already loaded in the RavenDB session.");
             }
 
-            string? changeVector = DocumentSession.Advanced.GetChangeVectorFor(user);
-
             TUserLogin? userLogin = user.GetUserLogin(loginProvider, providerKey);
             if (userLogin is null)
             {
                 Logger.LogWarning(
-                    $"Error removing user login as not found in user object. User {user.Id} Provider {loginProvider} Key {providerKey}");
+                    "Error removing user login as not found in user object. User {UserId} Provider {LoginProvider} Key {ProviderKey}",
+                    user.Id,
+                    loginProvider,
+                    providerKey
+                );
                 return;
             }
 
             user.RemoveLogin(userLogin);
 
-            var saveSuccess = false;
+            // cluster wide as we will deal with compare exchange values either directly or as atomic guards
+            DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
+            DocumentSession.Advanced.UseOptimisticConcurrency = false; // cluster wide tx doesn't support opt. concurrency
+
+            if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
+            {
+                UniqueReservationDocumentUtility<TUniqueReservation> uniqueReservationUtil =
+                    CreateUniqueReservationDocumentsUtility(
+                        UniqueReservationType.Login,
+                        CreateLoginReservationUniqueValue(loginProvider, providerKey)
+                    );
+                await uniqueReservationUtil
+                    .MarkReservationForDeletionAsync()
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
+                await compareExchangeUtility.PrepareReservationForRemovalAsync(
+                    UniqueReservationType.Login,
+                    CreateLoginReservationUniqueValue(loginProvider, providerKey),
+                    Logger,
+                    cancellationToken
+                ).ConfigureAwait(false);
+            }
+
             try
             {
-                await DocumentSession
-                    .StoreAsync(user, changeVector, user.Id, cancellationToken)
-                    .ConfigureAwait(false);
+                await DocumentSession.StoreAsync(user, cancellationToken).ConfigureAwait(false);
                 await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                saveSuccess = true;
             }
             catch (ConcurrencyException)
             {
                 Logger.LogInformation(
-                    $"Failed removing login {loginProvider} for user {user.UserName} due do concurrency problem."
+                    "Failed removing login {LoginProvider} for user {UserName} due do concurrency problem",
+                    loginProvider,
+                    user.UserName
                 );
-            }
-            finally
-            {
-                if (saveSuccess)
-                {
-                    CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
-                    bool removedLoginReservation = await compareExchangeUtility.RemoveReservationAsync(
-                        CompareExchangeUtility.ReservationType.Login,
-                        user,
-                        CreateLoginReservationUniqueValue(loginProvider, providerKey)
-                    ).ConfigureAwait(false);
-
-                    if (!removedLoginReservation)
-                    {
-                        Logger.LogError(
-                            $"Failed removing login reservation {loginProvider} for user {user.UserName}."
-                        );
-                    }
-                }
             }
         }
 
@@ -797,11 +994,12 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             ThrowIfCancelledOrDisposed(cancellationToken);
 
             return Task.FromResult<IList<UserLoginInfo>>(
-                user.Logins.Select(login => new UserLoginInfo(
-                    login.LoginProvider,
-                    login.ProviderKey,
-                    login.ProviderDisplayName
-                )).ToList()
+                user.Logins.Select(
+                    login => new UserLoginInfo(
+                        login.LoginProvider,
+                        login.ProviderKey,
+                        login.ProviderDisplayName
+                    )).ToList()
             );
         }
 
@@ -1052,12 +1250,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 return Task.FromResult<TAspUserToken>(null!);
             }
 
-            return Task.FromResult(CreateUserToken(
-                user,
-                userToken.LoginProvider,
-                userToken.Name,
-                userToken.Value
-            ));
+            return Task.FromResult(
+                CreateUserToken(
+                    user,
+                    userToken.LoginProvider,
+                    userToken.Name,
+                    userToken.Value
+                ));
         }
 
         /// <summary>
@@ -1186,26 +1385,56 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
-            CompareExchangeValue<string>? reservationValue = await compareExchangeUtility
-                .GetReservationAsync<string, TUser?>(
-                    CompareExchangeUtility.ReservationType.Login,
-                    null,
-                    CreateLoginReservationUniqueValue(loginProvider, providerKey)
-                ).ConfigureAwait(false);
-
-            if (reservationValue is null)
+            string? userId;
+            if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
             {
-                return null!;
+                UniqueReservationDocumentUtility<TUniqueReservation> uniqueReservationUtil =
+                    CreateUniqueReservationDocumentsUtility(
+                        UniqueReservationType.Login,
+                        CreateLoginReservationUniqueValue(loginProvider, providerKey)
+                    );
+                UniqueReservation? loginReservation = await uniqueReservationUtil
+                    .LoadReservationAsync()
+                    .ConfigureAwait(false);
+
+                if (loginReservation is null)
+                {
+                    return null!;
+                }
+
+                userId = loginReservation.ReferenceId;
+            }
+            else
+            {
+                CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
+                string loginCompareExchangeKey = compareExchangeUtility.CreateCompareExchangeKey(
+                    UniqueReservationType.Login,
+                    CreateLoginReservationUniqueValue(loginProvider, providerKey)
+                );
+                CompareExchangeValue<string>? loginCompareExchange = await DocumentSession.Advanced.DocumentStore
+                    .Operations.SendAsync(
+                        new GetCompareExchangeValueOperation<string>(loginCompareExchangeKey),
+                        token: cancellationToken
+                    ).ConfigureAwait(false);
+
+                if (loginCompareExchange is null)
+                {
+                    return null!;
+                }
+
+                userId = loginCompareExchange.Value;
             }
 
-            string userId = reservationValue.Value;
+            Debug.Assert(!string.IsNullOrWhiteSpace(userId), "Unexpected empty value for user id.");
             TUser? user = await DocumentSession.LoadAsync<TUser>(userId, cancellationToken).ConfigureAwait(false);
 
             if (user is null)
             {
                 Logger.LogError(
-                    $"Unknown user for data returned by compare exchange. Provider '{loginProvider}', user id '{userId}'.");
+                    "Unknown user for data returned by compare exchange. Provider '{LoginProvider}', user id '{UserId}'",
+                    loginProvider,
+                    userId
+                );
                 return null!;
             }
 
@@ -1213,7 +1442,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             if (userLogin is null)
             {
                 Logger.LogError(
-                    $"Compare exchange and user logins are not in sync for user {user.UserName}. User is missing a '{loginProvider}' login which is available in the compare exchange.");
+                    "Compare exchange and user logins are not in sync for user {UserName}. User is missing a '{LoginProvider}' login which is available in the compare exchange",
+                    user.UserName,
+                    loginProvider
+                );
                 return null!;
             }
 
@@ -1259,61 +1491,17 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             ThrowIfCancelledOrDisposed(cancellationToken);
 
             return DocumentSession.Query<TUser>()
-                .Where(user =>
-                    user.Id.Equals(userId)
-                    && user.Roles.Any(rId => rId.Equals(roleId)))
-                .Select(user => new TAspUserRole
-                {
-                    UserId = user.Id,
-                    RoleId = roleId,
-                })
+                .Where(
+                    user =>
+                        user.Id.Equals(userId)
+                        && user.Roles.Any(rId => rId.Equals(roleId)))
+                .Select(
+                    user => new TAspUserRole
+                    {
+                        UserId = user.Id,
+                        RoleId = roleId,
+                    })
                 .FirstOrDefaultAsync(cancellationToken);
-        }
-
-        /// <summary>
-        /// If there is a property change that requires uniqueness check, make a new compare exchange
-        /// reservation or throw if unique value already exists.
-        /// </summary>
-        /// <param name="user">User.</param>
-        /// <param name="changeType">Unique property change type.</param>
-        /// <returns>Optional property change data if there was a property change and
-        /// a successful new compare exchange reservation made.</returns>
-        /// <exception cref="UniqueValueExistsException">If new unique value already exists.</exception>
-        protected virtual Task<PropertyChange<string>?> ReserveIfUserPropertyChangedAsync(
-            TUser user,
-            UniqueUserPropertyChangeType changeType)
-        {
-            CompareExchangeUtility.ReservationType cmpExchangeReservationType;
-            string changedPropertyName;
-            string newPropertyValue;
-            string newCompareExchangeUniqueValue;
-
-            switch (changeType)
-            {
-                case UniqueUserPropertyChangeType.Username:
-                    cmpExchangeReservationType = CompareExchangeUtility.ReservationType.Username;
-                    changedPropertyName = nameof(user.NormalizedUserName);
-                    newPropertyValue = user.NormalizedUserName;
-                    newCompareExchangeUniqueValue = newPropertyValue;
-                    break;
-                case UniqueUserPropertyChangeType.Email:
-                    cmpExchangeReservationType = CompareExchangeUtility.ReservationType.Email;
-                    changedPropertyName = nameof(user.NormalizedEmail);
-                    newPropertyValue = user.NormalizedEmail;
-                    newCompareExchangeUniqueValue = newPropertyValue;
-                    break;
-                default:
-                    throw new Exception($"Unknown unique user property change type {changeType}");
-            }
-
-            return DocumentSession.ReserveIfPropertyChangedAsync(
-                CreateCompareExchangeUtility(),
-                user,
-                changedPropertyName,
-                newPropertyValue,
-                newCompareExchangeUniqueValue,
-                cmpExchangeReservationType
-            );
         }
 
         /// <summary>
@@ -1322,8 +1510,22 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <returns>An instance of <see cref="CompareExchangeUtility"/>.</returns>
         protected virtual CompareExchangeUtility CreateCompareExchangeUtility()
         {
+            Debug.Assert(
+                !UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues,
+                "Expected compare exchange values to be configured for unique value reservations."
+            );
             return new CompareExchangeUtility(DocumentSession);
         }
+
+        /// <summary>
+        /// Create an instance of <see cref="UniqueReservationDocumentUtility"/>.
+        /// </summary>
+        /// <param name="reservationType"></param>
+        /// <param name="uniqueValue"></param>
+        /// <returns>Instance of <see cref="UniqueReservationDocumentUtility"/>.</returns>
+        protected abstract UniqueReservationDocumentUtility<TUniqueReservation> CreateUniqueReservationDocumentsUtility(
+            UniqueReservationType reservationType,
+            string uniqueValue);
 
         private static string CreateLoginReservationUniqueValue(string loginProvider, string providerKey)
         {

@@ -6,104 +6,15 @@ using FluentAssertions;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
-using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
-using Moq;
-using Raven.Client.Documents.Session;
 using Xunit;
 using static Mcrio.AspNetCore.Identity.RavenDb.Tests.Initializer;
 
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 {
-    public class RavenRoleStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenIdentityRole>
+    public class RavenRoleStoreWithReservationDocumentsTest : IntegrationTestsBase<RavenIdentityUser, RavenIdentityRole>
     {
-        public static UniqueValuesReservationOptions ReservationsUsingCompareExchange() =>
-            new UniqueValuesReservationOptions() { UseReservationDocumentsForUniqueValues = false, };
-
-        [Fact]
-        public async Task RoleStoreMethodsThrowWhenDisposedTest()
-        {
-            var store = new RavenRoleStore(
-                () => new Mock<IAsyncDocumentSession>().Object,
-                new IdentityErrorDescriber(),
-                new Mock<ILogger<RavenRoleStore>>().Object,
-                ReservationsUsingCompareExchange()
-            );
-            store.Dispose();
-            await Assert.ThrowsAsync<ObjectDisposedException>(() => store.CreateAsync(CreateTestRole()));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() => store.UpdateAsync(CreateTestRole()));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() => store.DeleteAsync(CreateTestRole()));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() => store.GetRoleIdAsync(CreateTestRole()));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() => store.GetRoleNameAsync(CreateTestRole()));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
-                store.SetRoleNameAsync(CreateTestRole(), string.Empty));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
-                store.GetNormalizedRoleNameAsync(CreateTestRole()));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
-                store.SetNormalizedRoleNameAsync(CreateTestRole(), string.Empty));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() => store.FindByIdAsync("123"));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() => store.FindByNameAsync("name"));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() => store.GetClaimsAsync(CreateTestRole()));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
-                store.AddClaimAsync(CreateTestRole(), null!));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
-                store.RemoveClaimAsync(CreateTestRole(), null!));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() => store.CreateAsync(CreateTestRole()));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() => store.CreateAsync(CreateTestRole()));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() => store.CreateAsync(CreateTestRole()));
-            await Assert.ThrowsAsync<ObjectDisposedException>(() => store.CreateAsync(CreateTestRole()));
-        }
-
-        [Fact]
-        public async Task RoleStorePublicNullCheckTest()
-        {
-            var loggerMock = new Mock<ILogger<RavenRoleStore>>().Object;
-            Assert.Throws<NullReferenceException>(
-                () => new RavenRoleStore(
-                    null!,
-                    new IdentityErrorDescriber(),
-                    loggerMock,
-                    ReservationsUsingCompareExchange()
-                )
-            );
-            Assert.Throws<ArgumentNullException>(
-                "errorDescriber",
-                () => new RavenRoleStore(
-                    () => new Mock<IAsyncDocumentSession>().Object, null!, loggerMock,
-                    ReservationsUsingCompareExchange())
-            );
-            var store = new RavenRoleStore(
-                () => new Mock<IAsyncDocumentSession>().Object,
-                new IdentityErrorDescriber(),
-                loggerMock,
-                ReservationsUsingCompareExchange()
-            );
-            await Assert.ThrowsAsync<ArgumentNullException>(
-                "role",
-                async () => await store.GetRoleIdAsync(null!)
-            );
-            await Assert.ThrowsAsync<ArgumentNullException>(
-                "role", async () => await store.GetRoleNameAsync(null!)
-            );
-            await Assert.ThrowsAsync<ArgumentNullException>(
-                "role",
-                async () => await store.SetRoleNameAsync(null!, null!)
-            );
-            await Assert.ThrowsAsync<ArgumentNullException>(
-                "role",
-                async () => await store.CreateAsync(null!)
-            );
-            await Assert.ThrowsAsync<ArgumentNullException>(
-                "role",
-                async () => await store.UpdateAsync(null!)
-            );
-            await Assert.ThrowsAsync<ArgumentNullException>(
-                "role",
-                async () => await store.DeleteAsync(null!)
-            );
-        }
-
         [Fact]
         public async Task ShouldCreateRoleUsingManager()
         {
@@ -114,10 +25,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
             var role = CreateTestRole();
             IdentityResultAssert.IsSuccess(await manager.CreateAsync(role));
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Role,
+                role.NormalizedName,
+                role.Id
+            );
 
             WaitForUserToContinueTheTest(scope.DocumentStore);
-
-            await AssertCompareExchangeKeyExistsAsync($"idnt/role/{role.NormalizedName}");
         }
 
         [Fact]
@@ -133,7 +47,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             role.Id.Should().BeNull();
             IdentityResultAssert.IsSuccess(await manager.CreateAsync(role));
             role.Id.Should().NotBeNull("RavenDb automatically assigned an ID.");
-            await AssertCompareExchangeKeyExistsAsync($"idnt/role/{role.NormalizedName}");
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Role,
+                role.NormalizedName,
+                role.Id
+            );
             WaitForUserToContinueTheTest(scope.DocumentStore);
         }
 
@@ -149,7 +67,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
                 (await manager.CreateAsync(role)).Succeeded.Should().BeTrue();
                 WaitForIndexing(scope.DocumentStore);
-                await AssertCompareExchangeKeyExistsAsync($"idnt/role/{role.NormalizedName}");
+                await AssertReservationDocumentExistsWithValueAsync(
+                    UniqueReservationType.Role,
+                    role.NormalizedName,
+                    role.Id
+                );
             }
 
             {
@@ -159,8 +81,15 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 (await manager2.SetRoleNameAsync(role, "updatedName")).Succeeded.Should().BeTrue();
                 (await manager2.UpdateAsync(role)).Succeeded.Should().BeTrue();
                 WaitForIndexing(scope.DocumentStore);
-                await AssertCompareExchangeKeyExistsAsync("idnt/role/updatedName");
-                await AssertCompareExchangeKeyDoesNotExistAsync("idnt/role/initialName");
+                await AssertReservationDocumentExistsWithValueAsync(
+                    UniqueReservationType.Role,
+                    "updatedName",
+                    role.Id
+                );
+                await AssertReservationDocumentDoesNotExistAsync(
+                    UniqueReservationType.Role,
+                    "initialName"
+                );
             }
 
             {
@@ -186,8 +115,16 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await manager.CreateAsync(role2)).Succeeded.Should().BeTrue();
             WaitForIndexing(scope.DocumentStore);
 
-            await AssertCompareExchangeKeyExistsAsync("idnt/role/role");
-            await AssertCompareExchangeKeyExistsAsync("idnt/role/role2");
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Role,
+                "role",
+                role.Id
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Role,
+                "role2",
+                role2.Id
+            );
 
             (await manager.FindByNameAsync("role")).Should().NotBeNull();
             (await manager.FindByNameAsync("role2")).Should().NotBeNull();
@@ -195,8 +132,16 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await manager.SetRoleNameAsync(role, "role2")).Succeeded.Should().BeTrue();
             (await manager.UpdateAsync(role)).Succeeded.Should().BeFalse();
 
-            await AssertCompareExchangeKeyExistsAsync("idnt/role/role");
-            await AssertCompareExchangeKeyExistsAsync("idnt/role/role2");
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Role,
+                "role",
+                role.Id
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Role,
+                "role2",
+                role2.Id
+            );
         }
 
         /// <summary>
@@ -284,7 +229,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await store.UpdateAsync(role))
                 .Succeeded
                 .Should()
-                .BeFalse("because there will be already a role2 entry in the compare exchange");
+                .BeFalse("because role2 name is already reserved for role2");
             WaitForUserToContinueTheTest(scope.DocumentStore);
         }
 
@@ -594,7 +539,12 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
             (await manager2.DeleteAsync(retrievedRole)).Succeeded.Should().BeTrue();
 
-            await AssertCompareExchangeKeyDoesNotExistAsync($"idnt/role/{role.NormalizedName}");
+            WaitForUserToContinueTheTest(NewServiceScope().DocumentStore);
+
+            await AssertReservationDocumentDoesNotExistAsync(
+                UniqueReservationType.Role,
+                role.NormalizedName
+            );
         }
 
         [Fact]
@@ -776,7 +726,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
         private ServiceScope NewServiceScope(bool requireUniqueEmail = false, bool protectPersonalData = false)
             => InitializeServices(
-                options => options.UseReservationDocumentsForUniqueValues = false,
+                options => options.UseReservationDocumentsForUniqueValues = true,
                 requireUniqueEmail,
                 protectPersonalData
             );

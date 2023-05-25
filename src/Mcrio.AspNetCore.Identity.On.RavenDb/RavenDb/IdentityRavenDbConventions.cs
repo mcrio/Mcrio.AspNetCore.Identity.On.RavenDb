@@ -1,6 +1,7 @@
 using System;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility;
 
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.RavenDb
 {
@@ -28,6 +29,12 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.RavenDb
             if (typeof(RavenIdentityRole).IsAssignableFrom(type))
             {
                 collectionName = "Roles";
+                return true;
+            }
+
+            if (typeof(UniqueReservation).IsAssignableFrom(type))
+            {
+                collectionName = "IdentityUniqueReservations";
                 return true;
             }
 

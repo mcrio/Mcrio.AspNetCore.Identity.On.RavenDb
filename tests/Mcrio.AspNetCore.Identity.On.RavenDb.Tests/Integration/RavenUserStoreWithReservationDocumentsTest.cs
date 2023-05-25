@@ -8,6 +8,7 @@ using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,10 +19,10 @@ using static Mcrio.AspNetCore.Identity.RavenDb.Tests.Initializer;
 
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 {
-    public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenIdentityRole>
+    public class RavenUserStoreWithReservationDocumentsTest : IntegrationTestsBase<RavenIdentityUser, RavenIdentityRole>
     {
-        public static UniqueValuesReservationOptions UniquesUsingCompareExchange() =>
-            new UniqueValuesReservationOptions() { UseReservationDocumentsForUniqueValues = false, };
+        public static UniqueValuesReservationOptions UniquesUsingReservationDocuments() =>
+            new UniqueValuesReservationOptions() { UseReservationDocumentsForUniqueValues = true, };
 
         [Fact]
         public async Task UserStoreMethodsThrowWhenDisposedTest()
@@ -31,7 +32,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 new IdentityErrorDescriber(),
                 Options.Create(new IdentityOptions()),
                 new Mock<ILogger<RavenUserStore<RavenIdentityUser, RavenIdentityRole>>>().Object,
-                UniquesUsingCompareExchange()
+                UniquesUsingReservationDocuments()
             );
 
             store.Dispose();
@@ -96,7 +97,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 new IdentityErrorDescriber(),
                 Options.Create(new IdentityOptions()),
                 new Mock<ILogger<RavenUserStore<RavenIdentityUser, RavenIdentityRole>>>().Object,
-                UniquesUsingCompareExchange()
+                UniquesUsingReservationDocuments()
             );
             await Assert.ThrowsAsync<ArgumentNullException>(
                 "user",
@@ -187,7 +188,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             await Assert.ThrowsAsync<ArgumentNullException>(
                 "login",
                 async () => await store.AddLoginAsync(
-                    new RavenIdentityUser("fake")!, null!
+                    new RavenIdentityUser("fake"), null!
                 )
             );
             await Assert.ThrowsAsync<ArgumentNullException>(
@@ -301,36 +302,15 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await NewServiceScope().UserManager.FindByNameAsync(user.UserName)).Should().NotBeNull();
             (await NewServiceScope().UserManager.FindByIdAsync(user.Id)).Should().NotBeNull();
 
-            await AssertCompareExchangeKeyExistsAsync(
-                $"idnt/uname/{user.NormalizedUserName}",
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                user.NormalizedUserName,
+                user.Id,
                 "user was created"
             );
-            await AssertCompareExchangeKeyDoesNotExistAsync(
-                $"idnt/email/{user.NormalizedEmail}",
-                "unique email is not required"
-            );
-
-            WaitForUserToContinueTheTest(scope.DocumentStore);
-        }
-
-        [Fact]
-        public async Task ShouldCrateUserWithIdNullUsingUserManager()
-        {
-            var scope = NewServiceScope();
-            var manager = scope.UserManager;
-            RavenIdentityUser user = CreateTestUser(email: "foo@bar.com");
-            user.Id = null!;
-
-            user.Id.Should().BeNull();
-            IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
-            user.Id.Should().NotBeNull("RavenDb automatically assigned an ID.");
-
-            await AssertCompareExchangeKeyExistsAsync(
-                $"idnt/uname/{user.NormalizedUserName}",
-                "user was created"
-            );
-            await AssertCompareExchangeKeyDoesNotExistAsync(
-                $"idnt/email/{user.NormalizedEmail}",
+            await AssertReservationDocumentDoesNotExistAsync(
+                UniqueReservationType.Username,
+                user.NormalizedEmail,
                 "unique email is not required"
             );
 
@@ -340,14 +320,17 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         [Fact]
         public async Task ShouldNotCrateUserIfUsernameTakenUsingStore()
         {
+            var user1 = CreateTestUser("username");
             IdentityResultAssert.IsSuccess(
-                await NewServiceScope().UserManager.CreateAsync(CreateTestUser("username"))
+                await NewServiceScope().UserManager.CreateAsync(user1)
             );
+            var user2 = CreateTestUser("username-2");
             IdentityResultAssert.IsSuccess(
-                await NewServiceScope().UserManager.CreateAsync(CreateTestUser("username-2"))
+                await NewServiceScope().UserManager.CreateAsync(user2)
             );
+            var user3 = CreateTestUser("username-3");
             IdentityResultAssert.IsSuccess(
-                await NewServiceScope().UserManager.CreateAsync(CreateTestUser("username-3"))
+                await NewServiceScope().UserManager.CreateAsync(user3)
             );
 
             var scope = NewServiceScope();
@@ -356,9 +339,24 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
             (await store.CreateAsync(user)).Succeeded.Should().BeFalse("because username is already taken");
 
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username", "user exists");
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username-2", "user exists");
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username-3", "user exists");
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "username",
+                user1.Id,
+                "user exists"
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "username-2",
+                user2.Id,
+                "user exists"
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "username-3",
+                user3.Id,
+                "user exists"
+            );
 
             WaitForUserToContinueTheTest(scope.DocumentStore);
         }
@@ -368,36 +366,72 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         {
             const bool requireUniqueEmail = true;
             var manager = NewServiceScope(requireUniqueEmail).UserManager;
+            var user1 = CreateTestUser("username", "foo@bar.com");
             IdentityResultAssert.IsSuccess(
                 await manager.CreateAsync(
-                    CreateTestUser("username", "foo@bar.com")
+                    user1
                 )
             );
+            var user2 = CreateTestUser("username-2", "foo2@bar.com");
             IdentityResultAssert.IsSuccess(
                 await manager.CreateAsync(
-                    CreateTestUser("username-2", "foo2@bar.com")
+                    user2
                 )
             );
+            var user3 = CreateTestUser("username-3", "foo3@bar.com");
             IdentityResultAssert.IsSuccess(
                 await manager.CreateAsync(
-                    CreateTestUser("username-3", "foo3@bar.com")
+                    user3
                 )
             );
 
             var scope = NewServiceScope(requireUniqueEmail);
             var store = scope.UserStore;
-            var user = CreateTestUser("some-user", "foo2@bar.com");
+            var someUser = CreateTestUser("some-user", "foo2@bar.com");
 
-            (await store.CreateAsync(user)).Succeeded.Should().BeFalse("username is already taken");
+            (await store.CreateAsync(someUser)).Succeeded.Should().BeFalse("email is already taken");
 
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username", "user was created");
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username-2", "user was created");
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username-3", "user was created");
-            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com", "user was created");
-            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo2@bar.com", "user was created");
-            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo3@bar.com", "user was created");
-            await AssertCompareExchangeKeyDoesNotExistAsync(
-                "idnt/uname/some-user",
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "username",
+                user1.Id,
+                "user was created"
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "username-2",
+                user2.Id,
+                "user was created"
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "username-3",
+                user3.Id,
+                "user was created"
+            );
+
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Email,
+                "foo@bar.com",
+                user1.Id,
+                "user was created"
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Email,
+                "foo2@bar.com",
+                user2.Id,
+                "user was created"
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Email,
+                "foo3@bar.com",
+                user3.Id,
+                "user was created"
+            );
+
+            await AssertReservationDocumentDoesNotExistAsync(
+                UniqueReservationType.Username,
+                "some-user",
                 "user was not added due to unique email collision"
             );
 
@@ -418,8 +452,18 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await NewServiceScope().UserManager.FindByNameAsync(user.UserName)).Should().NotBeNull();
             (await NewServiceScope().UserManager.FindByEmailAsync(user.Email)).Should().NotBeNull();
 
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username", "user was created");
-            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com", "user was created");
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "username",
+                user.Id,
+                "user was created"
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Email,
+                "foo@bar.com",
+                user.Id,
+                "user was created"
+            );
 
             // delete user
             IdentityResultAssert.IsSuccess(await manager.DeleteAsync(user));
@@ -429,8 +473,15 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await NewServiceScope().UserManager.FindByNameAsync(user.UserName)).Should().BeNull();
             (await NewServiceScope().UserManager.FindByEmailAsync(user.Email)).Should().BeNull();
 
-            await AssertCompareExchangeKeyDoesNotExistAsync("idnt/uname/username", "user was deleted");
-            await AssertCompareExchangeKeyDoesNotExistAsync("idnt/email/foo@bar.com", "user was deleted");
+
+            await AssertReservationDocumentDoesNotExistAsync(
+                UniqueReservationType.Username,
+                "username"
+            );
+            await AssertReservationDocumentDoesNotExistAsync(
+                UniqueReservationType.Email,
+                "foo@bar.com"
+            );
 
             // reinsert user
             var scope2 = NewServiceScope(requiredEmail);
@@ -443,8 +494,19 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             (await NewServiceScope().UserManager.FindByEmailAsync(user.Email)).Should().NotBeNull();
 
             WaitForUserToContinueTheTest(scope.DocumentStore);
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/username", "user was created");
-            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com", "user was created");
+
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "username",
+                user.Id,
+                "user was created"
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Email,
+                "foo@bar.com",
+                user.Id,
+                "user was created"
+            );
         }
 
         [Fact]
@@ -477,8 +539,16 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 .Should()
                 .Contain(info => info.LoginProvider == "provider2" && info.ProviderKey == "key2");
 
-            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", user.Id);
-            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider2/key2", user.Id);
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Login,
+                "provider/key",
+                user.Id
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Login,
+                "provider2/key2",
+                user.Id
+            );
         }
 
         [Fact]
@@ -508,7 +578,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             var anotherUserRetrieved = await NewServiceScope().UserManager.FindByIdAsync(anotherUser.Id);
             anotherUserRetrieved.Logins.Count.Should().Be(0);
 
-            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", user.Id);
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Login,
+                "provider/key",
+                user.Id
+            );
         }
 
         [Fact]
@@ -524,8 +598,16 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             await manager.AddLoginAsync(user, new UserLoginInfo("provider", "key", "displayNameOfDuplicate"));
             await manager.AddLoginAsync(user, new UserLoginInfo("provider2", "key2", "displayName"));
 
-            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", user.Id);
-            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider2/key2", user.Id);
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Login,
+                "provider/key",
+                user.Id
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Login,
+                "provider2/key2",
+                user.Id
+            );
 
             var scope2 = NewServiceScope();
             var manager2 = scope2.UserManager;
@@ -541,15 +623,27 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 .Should()
                 .BeTrue();
 
-            (await manager2.AddLoginAsync(retrievedUser, new UserLoginInfo("provier3", "key3", "foo")))
+            (await manager2.AddLoginAsync(retrievedUser, new UserLoginInfo("provider3", "key3", "foo")))
                 .Succeeded.Should().BeTrue();
 
             (await manager2.AddLoginAsync(retrievedUser, new UserLoginInfo("provider", "key", "baz")))
                 .Succeeded.Should().BeFalse("already exists");
 
-            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", retrievedUser.Id);
-            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider2/key2", retrievedUser.Id);
-            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provier3/key3", retrievedUser.Id);
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Login,
+                "provider/key",
+                retrievedUser.Id
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Login,
+                "provider2/key2",
+                retrievedUser.Id
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Login,
+                "provider3/key3",
+                retrievedUser.Id
+            );
         }
 
         [Fact]
@@ -564,20 +658,39 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             await manager.AddLoginAsync(user, new UserLoginInfo("provider", "key", "displayName"));
             await manager.AddLoginAsync(user, new UserLoginInfo("provider2", "key2", "displayName"));
 
-            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", user.Id);
-            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider2/key2", user.Id);
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Login,
+                "provider/key",
+                user.Id
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Login,
+                "provider2/key2",
+                user.Id
+            );
 
             var anotherUser = CreateTestUser();
-            var manager2 = NewServiceScope().UserManager;
-            (await manager2.CreateAsync(anotherUser)).Succeeded.Should().BeTrue();
-            (await manager2.AddLoginAsync(anotherUser, new UserLoginInfo("provider", "key", "displayName")))
-                .Succeeded.Should().BeFalse("there is already a login registered with the same parameters.");
+
+            {
+                var manager2 = NewServiceScope().UserManager;
+                (await manager2.CreateAsync(anotherUser)).Succeeded.Should().BeTrue();
+                (await manager2.AddLoginAsync(anotherUser, new UserLoginInfo("provider", "key", "displayName")))
+                    .Succeeded.Should().BeFalse("there is already a login registered with the same parameters.");
+            }
 
             (await manager.RemoveLoginAsync(user, "provider", "key")).Succeeded.Should().BeTrue();
 
-            (await manager2.AddLoginAsync(anotherUser, new UserLoginInfo("provider", "key", "displayName")))
-                .Succeeded.Should().BeTrue("this login data no longer exists in the database.");
-            await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", anotherUser.Id);
+            {
+                var manager2 = NewServiceScope().UserManager;
+                var anotherUserFromDb = await manager2.FindByIdAsync(anotherUser.Id);
+                (await manager2.AddLoginAsync(anotherUserFromDb, new UserLoginInfo("provider", "key", "displayName")))
+                    .Succeeded.Should().BeTrue("this login data no longer exists in the database.");
+                await AssertReservationDocumentExistsWithValueAsync(
+                    UniqueReservationType.Login,
+                    "provider/key",
+                    anotherUserFromDb.Id
+                );
+            }
         }
 
         [Fact]
@@ -962,7 +1075,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             var user = await SeedUserWithTwoRolesAndTwoClaims(userName: username);
             user.Should().NotBeNull();
 
-            await AssertCompareExchangeKeyExistsAsync($"idnt/uname/{user.NormalizedUserName}");
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                user.NormalizedUserName,
+                user.Id
+            );
 
             {
                 var scope = NewServiceScope();
@@ -976,7 +1093,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                     );
             }
 
-            await AssertCompareExchangeKeyExistsAsync($"idnt/uname/{user.NormalizedUserName}");
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                user.NormalizedUserName,
+                user.Id
+            );
 
             {
                 var store = NewServiceScope().UserStore;
@@ -984,22 +1105,41 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 await store.SetUserNameAsync(retrievedUser, "test123");
                 await store.SetNormalizedUserNameAsync(retrievedUser, "test123");
                 await store.UpdateAsync(retrievedUser);
+
+                await AssertReservationDocumentExistsWithValueAsync(
+                    UniqueReservationType.Username,
+                    "test123",
+                    retrievedUser.Id
+                );
             }
 
-            await AssertCompareExchangeKeyDoesNotExistAsync($"idnt/uname/{user.NormalizedUserName}");
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/test123");
+            await AssertReservationDocumentDoesNotExistAsync(
+                UniqueReservationType.Username,
+                user.NormalizedUserName
+            );
+
 
             {
                 var scope = NewServiceScope();
                 var store = scope.UserStore;
-                var result = await store.CreateAsync(CreateTestUser(username));
+                var newUser = CreateTestUser(username);
+                var result = await store.CreateAsync(newUser);
                 result.Succeeded.Should().BeTrue("existing user with same username previously renamed username");
 
                 WaitForUserToContinueTheTest(scope.DocumentStore);
+
+                await AssertReservationDocumentExistsWithValueAsync(
+                    UniqueReservationType.Username,
+                    username,
+                    newUser.Id
+                );
             }
 
-            await AssertCompareExchangeKeyExistsAsync($"idnt/uname/{username}");
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/test123");
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "test123",
+                user.Id
+            );
         }
 
         /// <summary>
@@ -1037,12 +1177,14 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         {
             const bool requireUniqueEmail = true;
 
+            var someUser = CreateTestUser("some-user", "foo@bar.com");
+
             {
                 var scope = NewServiceScope(requireUniqueEmail);
                 var store = scope.UserStore;
 
-                var user = CreateTestUser("some-user", "foo@bar.com");
-                (await store.CreateAsync(user)).Succeeded.Should().BeTrue();
+
+                (await store.CreateAsync(someUser)).Succeeded.Should().BeTrue();
             }
 
             {
@@ -1051,11 +1193,22 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
                 var user2 = CreateTestUser("some-user-2", "foo@bar.com");
                 (await store.CreateAsync(user2)).Succeeded.Should().BeFalse("user with same email exists.");
-
-                await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
-                await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com");
-                await AssertCompareExchangeKeyDoesNotExistAsync("idnt/uname/some-user-2");
             }
+
+            await AssertReservationDocumentDoesNotExistAsync(
+                UniqueReservationType.Username,
+                "some-user-2"
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "some-user",
+                someUser.Id
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Email,
+                "foo@bar.com",
+                someUser.Id
+            );
 
             {
                 var scope = NewServiceScope(requireUniqueEmail);
@@ -1066,11 +1219,25 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 await store.SetNormalizedEmailAsync(user, "baz@baz.com");
                 await store.UpdateAsync(user);
 
+                await AssertReservationDocumentExistsWithValueAsync(
+                    UniqueReservationType.Username,
+                    "some-user",
+                    user.Id
+                );
+                await AssertReservationDocumentDoesNotExistAsync(
+                    UniqueReservationType.Username,
+                    "some-user-2"
+                );
 
-                await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
-                await AssertCompareExchangeKeyDoesNotExistAsync("idnt/email/foo@bar.com");
-                await AssertCompareExchangeKeyExistsAsync("idnt/email/baz@baz.com");
-                await AssertCompareExchangeKeyDoesNotExistAsync("idnt/uname/some-user-2");
+                await AssertReservationDocumentExistsWithValueAsync(
+                    UniqueReservationType.Email,
+                    "baz@baz.com",
+                    user.Id
+                );
+                await AssertReservationDocumentDoesNotExistAsync(
+                    UniqueReservationType.Email,
+                    "foo@bar.com"
+                );
             }
 
             {
@@ -1080,10 +1247,26 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 var user2 = CreateTestUser("some-user-2", "foo@bar.com");
                 (await store.CreateAsync(user2)).Succeeded.Should().BeTrue();
 
-                await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
-                await AssertCompareExchangeKeyExistsAsync("idnt/email/baz@baz.com");
-                await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user-2");
-                await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com");
+                await AssertReservationDocumentExistsWithValueAsync(
+                    UniqueReservationType.Username,
+                    "some-user",
+                    someUser.Id
+                );
+                await AssertReservationDocumentExistsWithValueAsync(
+                    UniqueReservationType.Email,
+                    "baz@baz.com",
+                    someUser.Id
+                );
+                await AssertReservationDocumentExistsWithValueAsync(
+                    UniqueReservationType.Username,
+                    "some-user-2",
+                    user2.Id
+                );
+                await AssertReservationDocumentExistsWithValueAsync(
+                    UniqueReservationType.Email,
+                    "foo@bar.com",
+                    user2.Id
+                );
             }
         }
 
@@ -1105,9 +1288,20 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             var user2 = CreateTestUser("some-user-2", "foo@bar.com");
             (await store.CreateAsync(user2)).Succeeded.Should().BeTrue("unique email is not required");
 
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user-2");
-            await AssertCompareExchangeKeyDoesNotExistAsync("idnt/email/foo@bar.com");
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "some-user",
+                user.Id
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "some-user-2",
+                user2.Id
+            );
+            await AssertReservationDocumentDoesNotExistAsync(
+                UniqueReservationType.Email,
+                "foo@bar.com"
+            );
         }
 
         [Fact]
@@ -1127,17 +1321,44 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
             WaitForIndexing(scope.DocumentStore);
 
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
-            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com");
-            await AssertCompareExchangeKeyDoesNotExistAsync("idnt/uname/some-user-2");
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "some-user",
+                user.Id
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Email,
+                "foo@bar.com",
+                user.Id
+            );
+            await AssertReservationDocumentDoesNotExistAsync(
+                UniqueReservationType.Username,
+                "some-user-2"
+            );
 
             var user3 = CreateTestUser("some-user-3", "foo3@bar.com");
             (await manager.CreateAsync(user3)).Succeeded.Should().BeTrue("has different email");
 
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
-            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com");
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user-3");
-            await AssertCompareExchangeKeyExistsAsync("idnt/email/foo3@bar.com");
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "some-user",
+                user.Id
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Email,
+                "foo@bar.com",
+                user.Id
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "some-user-3",
+                user3.Id
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Email,
+                "foo3@bar.com",
+                user3.Id
+            );
         }
 
         [Fact]
@@ -1157,9 +1378,20 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
             WaitForIndexing(scope.DocumentStore);
 
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
-            await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user-2");
-            await AssertCompareExchangeKeyDoesNotExistAsync("idnt/email/foo@bar.com");
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "some-user",
+                user.Id
+            );
+            await AssertReservationDocumentExistsWithValueAsync(
+                UniqueReservationType.Username,
+                "some-user-2",
+                user2.Id
+            );
+            await AssertReservationDocumentDoesNotExistAsync(
+                UniqueReservationType.Email,
+                "foo@bar.com"
+            );
         }
 
         [Fact]
@@ -1408,7 +1640,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
         private ServiceScope NewServiceScope(bool requireUniqueEmail = false, bool protectPersonalData = false)
             => InitializeServices(
-                options => options.UseReservationDocumentsForUniqueValues = false,
+                options => options.UseReservationDocumentsForUniqueValues = true,
                 requireUniqueEmail,
                 protectPersonalData
             );
