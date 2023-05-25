@@ -321,10 +321,15 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                     role,
                     changedPropertyName: nameof(role.NormalizedName),
                     newPropertyValue: role.NormalizedName,
-                    out PropertyChange<string>? propertyChange
+                    out PropertyChange<string?>? propertyChange
                 ))
             {
                 Debug.Assert(propertyChange != null, $"Unexpected NULL value for {nameof(propertyChange)}");
+
+                Debug.Assert(
+                    !string.IsNullOrWhiteSpace(propertyChange.OldPropertyValue),
+                    "Role name must never be empty or NULL."
+                );
 
                 // cluster wide as we will deal with compare exchange values either directly or as atomic guards
                 DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);

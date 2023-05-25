@@ -26,8 +26,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions
             this IAsyncDocumentSession documentSession,
             TEntity entity,
             string changedPropertyName,
-            string newPropertyValue,
-            out PropertyChange<string>? propertyChange)
+            string? newPropertyValue,
+            out PropertyChange<string?>? propertyChange)
             where TEntity : IEntity
         {
             Debug.Assert(
@@ -38,7 +38,9 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions
             IDictionary<string, DocumentsChanges[]> whatChanged = documentSession.Advanced.WhatChanged();
             string entityId = entity.Id;
 
+#pragma warning disable SA1011
             if (whatChanged.TryGetValue(entityId, out DocumentsChanges[]? documentChanges))
+#pragma warning restore SA1011
             {
                 DocumentsChanges? change = documentChanges?
                     .FirstOrDefault(changes =>
@@ -48,7 +50,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions
 
                 if (change != null)
                 {
-                    if (newPropertyValue != change.FieldNewValue.ToString())
+                    if (newPropertyValue != change.FieldNewValue?.ToString())
                     {
                         throw new InvalidOperationException(
                             $"User updated {changedPropertyName} property '{newPropertyValue}' should match change "
@@ -56,7 +58,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions
                         );
                     }
 
-                    propertyChange = new PropertyChange<string>(
+                    propertyChange = new PropertyChange<string?>(
                         oldPropertyValue: change.FieldOldValue.ToString(),
                         newPropertyValue: newPropertyValue
                     );

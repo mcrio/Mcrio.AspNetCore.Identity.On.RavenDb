@@ -283,7 +283,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             // cluster wide as we will deal with compare exchange values either directly or as atomic guards
             // for unique value reservations
             DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-            DocumentSession.Advanced.UseOptimisticConcurrency = false; // cluster wide tx doesn't support opt. concurrency
+            DocumentSession.Advanced.UseOptimisticConcurrency =
+                false; // cluster wide tx doesn't support opt. concurrency
 
             // no change vector as we rely on cluster wide optimistic concurrency and atomic guards
             await DocumentSession
@@ -435,16 +436,23 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                     user,
                     changedPropertyName: nameof(user.NormalizedUserName),
                     newPropertyValue: user.NormalizedUserName,
-                    out PropertyChange<string>? usernamePropertyChange
+                    out PropertyChange<string?>? usernamePropertyChange
                 ))
             {
                 Debug.Assert(
                     usernamePropertyChange != null,
-                    $"Unexpected NULL value for {nameof(usernamePropertyChange)}");
+                    $"Unexpected NULL value for {nameof(usernamePropertyChange)}"
+                );
+
+                Debug.Assert(
+                    !string.IsNullOrWhiteSpace(usernamePropertyChange.OldPropertyValue),
+                    "Username must never be empty or NULL."
+                );
 
                 // cluster wide as we will deal with compare exchange values either directly or as atomic guards
                 DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-                DocumentSession.Advanced.UseOptimisticConcurrency = false; // cluster wide tx doesn't support opt. concurrency
+                DocumentSession.Advanced.UseOptimisticConcurrency =
+                    false; // cluster wide tx doesn't support opt. concurrency
 
                 if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
                 {
@@ -490,7 +498,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                     user,
                     changedPropertyName: nameof(user.NormalizedEmail),
                     newPropertyValue: user.NormalizedEmail,
-                    out PropertyChange<string>? emailPropertyChange
+                    out PropertyChange<string?>? emailPropertyChange
                 )
                 && OptionsAccessor.Value.User.RequireUniqueEmail)
             {
@@ -498,7 +506,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
                 // cluster wide as we will deal with compare exchange values either directly or as atomic guards
                 DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-                DocumentSession.Advanced.UseOptimisticConcurrency = false; // cluster wide tx doesn't support opt. concurrency
+                DocumentSession.Advanced.UseOptimisticConcurrency =
+                    false; // cluster wide tx doesn't support opt. concurrency
 
                 if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
                 {
@@ -592,7 +601,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             // cluster wide as we will deal with compare exchange values either directly or as atomic guards
             DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-            DocumentSession.Advanced.UseOptimisticConcurrency = false; // cluster wide tx doesn't support opt. concurrency
+            DocumentSession.Advanced.UseOptimisticConcurrency =
+                false; // cluster wide tx doesn't support opt. concurrency
 
             if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
             {
@@ -838,7 +848,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             // cluster wide as we will deal with compare exchange values either directly or as atomic guards
             DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-            DocumentSession.Advanced.UseOptimisticConcurrency = false; // cluster wide tx doesn't support opt. concurrency
+            DocumentSession.Advanced.UseOptimisticConcurrency =
+                false; // cluster wide tx doesn't support opt. concurrency
 
             if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
             {
@@ -942,7 +953,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             // cluster wide as we will deal with compare exchange values either directly or as atomic guards
             DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-            DocumentSession.Advanced.UseOptimisticConcurrency = false; // cluster wide tx doesn't support opt. concurrency
+            DocumentSession.Advanced.UseOptimisticConcurrency =
+                false; // cluster wide tx doesn't support opt. concurrency
 
             if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
             {

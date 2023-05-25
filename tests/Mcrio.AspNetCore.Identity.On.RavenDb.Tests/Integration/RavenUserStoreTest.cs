@@ -1027,6 +1027,33 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             }
         }
 
+        [Fact]
+        public async Task ShouldUpdateMyEmailWithNullValueAsUniqueEmailIsNotRequired()
+        {
+            const bool requireUniqueEmail = false;
+
+            {
+                var scope = NewServiceScope(requireUniqueEmail);
+                var store = scope.UserStore;
+
+                var user = CreateTestUser("some-user", "foo@bar.com");
+                (await store.CreateAsync(user)).Succeeded.Should().BeTrue();
+
+                await AssertCompareExchangeKeyDoesNotExistAsync("idnt/email/foo@bar.com");
+                await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
+            }
+
+            {
+                var scope = NewServiceScope(requireUniqueEmail);
+                var store = scope.UserStore;
+
+                var user = await store.FindByNameAsync("some-user");
+                await store.SetEmailAsync(user, null);
+                await store.SetNormalizedEmailAsync(user, null);
+                await store.UpdateAsync(user);
+            }
+        }
+
         /// <summary>
         /// This test is important to test the Store level uniqueness checks.
         /// Manager does internal validation against the indexes which we want to bypass here.
