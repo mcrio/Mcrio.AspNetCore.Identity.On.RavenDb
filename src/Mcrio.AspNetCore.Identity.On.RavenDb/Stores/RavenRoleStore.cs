@@ -53,7 +53,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// <param name="errorDescriber">Error describer.</param>
         /// <param name="logger">Logger.</param>
         /// <param name="uniqueValuesReservationOptions">Unique values reservation options.</param>
-        protected RavenRoleStore(
+        public RavenRoleStore(
             IdentityDocumentSessionProvider documentSessionProvider,
             IdentityErrorDescriber errorDescriber,
             ILogger<RavenRoleStore<TRole, TUser>> logger,
