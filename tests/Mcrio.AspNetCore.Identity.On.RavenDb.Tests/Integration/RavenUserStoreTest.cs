@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims;
@@ -1302,6 +1303,70 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
             int requestCountEnd = scope.DocumentSession.Advanced.NumberOfRequests;
             (requestCountEnd - requestCountStart).Should().Be(1);
+        }
+
+        [Fact]
+        public async Task ShouldGetAllUsers()
+        {
+            // seed users
+            for (var i = 0; i < 300; i++)
+            {
+                RavenIdentityUser user = CreateTestUser();
+                (await NewServiceScope().UserManager.CreateAsync(user)).Succeeded.Should().BeTrue();
+            }
+
+            WaitForIndexing(NewServiceScope().DocumentStore);
+
+            RavenUserStore<RavenIdentityUser, RavenIdentityRole> store = NewServiceScope().UserStore;
+
+            var users = new List<RavenIdentityUser>();
+            await foreach (RavenIdentityUser ravenIdentityUser in store.GetAllUsersAsync().ConfigureAwait(false))
+            {
+                users.Add(ravenIdentityUser);
+            }
+
+            users.Count.Should().Be(300);
+        }
+
+        [Fact]
+        public async Task ShouldGetAllUsersAndUtilizeCancellationToken()
+        {
+            const int totalUsersToSeed = 300;
+            const int cancelWhen = 30;
+
+            // seed users
+            for (var i = 0; i < totalUsersToSeed; i++)
+            {
+                RavenIdentityUser user = CreateTestUser();
+                (await NewServiceScope().UserManager.CreateAsync(user)).Succeeded.Should().BeTrue();
+            }
+
+            WaitForIndexing(NewServiceScope().DocumentStore);
+
+            RavenUserStore<RavenIdentityUser, RavenIdentityRole> store = NewServiceScope().UserStore;
+
+            var cancellationTokenSource = new CancellationTokenSource();
+            var users = new List<RavenIdentityUser>();
+
+            try
+            {
+                await foreach (RavenIdentityUser ravenIdentityUser in store
+                                   .GetAllUsersAsync(cancellationTokenSource.Token)
+                                   .ConfigureAwait(false))
+                {
+                    users.Add(ravenIdentityUser);
+                    if (users.Count == cancelWhen)
+                    {
+                        cancellationTokenSource.Cancel();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                (ex is OperationCanceledException).Should().BeTrue();
+            }
+
+            users.Count.Should().BeLessThan(totalUsersToSeed);
         }
 
         [Fact]

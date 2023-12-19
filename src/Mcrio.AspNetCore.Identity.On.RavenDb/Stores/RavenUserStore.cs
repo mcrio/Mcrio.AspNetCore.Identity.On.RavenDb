@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +18,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
@@ -149,7 +151,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
     /// <inheritdoc />
     public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim,
-            TUniqueReservation>
+        TUniqueReservation>
         : RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim, IdentityUserClaim<string>,
             IdentityUserRole<string>, IdentityUserLogin<string>, IdentityUserToken<string>,
             IdentityRoleClaim<string>, TUniqueReservation>
@@ -671,6 +673,28 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         }
 
         /// <summary>
+        /// Get all users.
+        /// </summary>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns><see cref="Task"/> representing an asynchronous operation.</returns>
+        public async IAsyncEnumerable<TUser> GetAllUsersAsync(
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            ThrowIfCancelledOrDisposed(cancellationToken);
+
+            IRavenQueryable<TUser>? query = DocumentSession.Query<TUser>();
+            await using IAsyncEnumerator<StreamResult<TUser>>? streamResult = await DocumentSession
+                .Advanced
+                .StreamAsync(query, cancellationToken)
+                .ConfigureAwait(false);
+
+            while (await streamResult.MoveNextAsync().ConfigureAwait(false))
+            {
+                yield return streamResult.Current.Document;
+            }
+        }
+
+        /// <summary>
         /// Finds a user by given normalized username.
         /// </summary>
         /// <param name="normalizedUserName">Normalized username.</param>
@@ -688,9 +712,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            return DocumentSession
-                .Query<TUser>()
-                .Where(user => user.NormalizedUserName == normalizedUserName)
+            return Queryable.Where(
+                    DocumentSession
+                        .Query<TUser>(), user => user.NormalizedUserName == normalizedUserName
+                )
                 .SingleOrDefaultAsync(cancellationToken);
         }
 
@@ -799,8 +824,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            IQueryable<TUser> query = DocumentSession.Query<TUser>()
-                .Where(user => user.Claims.Any(item => item.Type == claim.Type && item.Value == claim.Value));
+            IQueryable<TUser> query = Queryable.Where(
+                DocumentSession.Query<TUser>(),
+                user => user.Claims.Any(item => item.Type == claim.Type && item.Value == claim.Value)
+            );
 
             IAsyncEnumerator<StreamResult<TUser>> streamResult = await DocumentSession
                 .Advanced
@@ -1033,9 +1060,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            return DocumentSession
-                .Query<TUser>()
-                .Where(user => user.NormalizedEmail == normalizedEmail)
+            return Queryable.Where(
+                    DocumentSession
+                        .Query<TUser>(), user => user.NormalizedEmail == normalizedEmail
+                )
                 .SingleOrDefaultAsync(token: cancellationToken);
         }
 
@@ -1086,8 +1114,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
                 throw new InvalidOperationException($"Unknown role with normalized name {normalizedRoleName}");
             }
 
-            IQueryable<TUser> query = DocumentSession.Query<TUser>()
-                .Where(item => item.Roles.Contains(role.Id));
+            IQueryable<TUser> query =
+                Queryable.Where(DocumentSession.Query<TUser>(), item => item.Roles.Contains(role.Id));
 
             IAsyncEnumerator<StreamResult<TUser>> streamResult = await DocumentSession
                 .Advanced
@@ -1502,17 +1530,18 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            return DocumentSession.Query<TUser>()
-                .Where(
-                    user =>
-                        user.Id.Equals(userId)
-                        && user.Roles.Any(rId => rId.Equals(roleId)))
-                .Select(
-                    user => new TAspUserRole
+            return Queryable.Select(
+                    DocumentSession.Query<TUser>()
+                        .Where(
+                            user =>
+                                user.Id.Equals(userId)
+                                && user.Roles.Any(rId => rId.Equals(roleId))
+                        ), user => new TAspUserRole
                     {
                         UserId = user.Id,
                         RoleId = roleId,
-                    })
+                    }
+                )
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
