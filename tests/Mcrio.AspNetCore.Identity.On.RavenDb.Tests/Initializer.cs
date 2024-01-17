@@ -10,7 +10,7 @@ namespace Mcrio.AspNetCore.Identity.RavenDb.Tests
     {
         public static RavenIdentityUser CreateTestUser(
             string? username = null,
-            string email = "",
+            string? email = "",
             string phoneNumber = "",
             bool lockoutEnabled = false,
             DateTimeOffset? lockoutEnd = default)

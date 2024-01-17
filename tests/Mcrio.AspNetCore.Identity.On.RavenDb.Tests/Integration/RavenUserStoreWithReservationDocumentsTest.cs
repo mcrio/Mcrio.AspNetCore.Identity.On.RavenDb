@@ -1062,9 +1062,71 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 var store = scope.UserStore;
 
                 var user = await store.FindByNameAsync("some-user");
+                user.Email.Should().Be("foo@bar.com");
+            }
+
+            {
+                var scope = NewServiceScope(requireUniqueEmail);
+                var store = scope.UserStore;
+
+                var user = await store.FindByNameAsync("some-user");
                 await store.SetEmailAsync(user, null);
                 await store.SetNormalizedEmailAsync(user, null);
                 await store.UpdateAsync(user);
+            }
+
+            {
+                var scope = NewServiceScope(requireUniqueEmail);
+                var store = scope.UserStore;
+
+                var user = await store.FindByNameAsync("some-user");
+                user.Email.Should().BeNull();
+            }
+        }
+        
+        [Fact]
+        public async Task ShouldUpdateMyEmailWithValidEmailAfterItWasNull()
+        {
+            const bool requireUniqueEmail = false;
+
+            {
+                var scope = NewServiceScope(requireUniqueEmail);
+                var store = scope.UserStore;
+
+                var user = CreateTestUser("some-user", null);
+                (await store.CreateAsync(user)).Succeeded.Should().BeTrue();
+                
+                await AssertReservationDocumentExistsWithValueAsync(
+                    UniqueReservationType.Username,
+                    "some-user",
+                    user.Id
+                );
+            }
+
+            {
+                var scope = NewServiceScope(requireUniqueEmail);
+                var store = scope.UserStore;
+
+                var user = await store.FindByNameAsync("some-user");
+                user.Email.Should().BeNull();
+            }
+
+            {
+                var scope = NewServiceScope(requireUniqueEmail);
+                var store = scope.UserStore;
+
+                var user = await store.FindByNameAsync("some-user");
+                await store.SetEmailAsync(user, "foo@bar.baz");
+                await store.SetNormalizedEmailAsync(user, "foo@bar.baz");
+                await store.UpdateAsync(user);
+            }
+
+            {
+                var scope = NewServiceScope(requireUniqueEmail);
+                var store = scope.UserStore;
+
+                var user = await store.FindByNameAsync("some-user");
+                user.Email.Should().Be("foo@bar.baz");
             }
         }
 

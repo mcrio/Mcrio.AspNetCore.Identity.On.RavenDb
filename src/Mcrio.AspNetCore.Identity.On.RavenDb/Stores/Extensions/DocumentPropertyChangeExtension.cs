@@ -59,7 +59,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions
                     }
 
                     propertyChange = new PropertyChange<string?>(
-                        oldPropertyValue: change.FieldOldValue.ToString(),
+                        oldPropertyValue: change.FieldOldValue?.ToString(),
                         newPropertyValue: newPropertyValue
                     );
                     return true;
