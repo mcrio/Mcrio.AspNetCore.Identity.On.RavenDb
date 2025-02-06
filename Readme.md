@@ -29,6 +29,8 @@ _(I am writing this document more than a year later so there may have been other
   This fixes a bug when searching for users by claims, where we looked up multiple child fields using an auto fan-out index
   which may produce false results. Solution is to use the `intersect` query but `Corax` does not support it yet.
 - `RavenIdentityUser` requires setting the `Id` property. 
+- Integration tests require a RavenDB developer license. Obtain a developer license, place it in a file and set the
+  environment variable `RAVENDB_DEVELOPER_LICENSE_PATH` to point to that file.
 
 ## Getting Started
 
