@@ -1,4 +1,5 @@
 using System;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Index;
 using Raven.Client.Documents;
 using Raven.TestDriver;
 
@@ -6,14 +7,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 {
     public class RavenDbFixture : RavenTestDriver, IDisposable
     {
-        private readonly Lazy<IDocumentStore> _documentStore;
-
         public RavenDbFixture()
         {
-            _documentStore = new Lazy<IDocumentStore>(CreateDocumentStore);
+            DocumentStore = CreateDocumentStore();
+            RavenDbIdentityIndexCreator.CreateIndexes<UsersByClaimIndex>(DocumentStore, DocumentStore.Database);
         }
 
-        public IDocumentStore DocumentStore => _documentStore.Value;
+        public IDocumentStore DocumentStore { get; }
 
         public sealed override void Dispose()
         {
@@ -25,15 +25,20 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         {
             if (disposing)
             {
-                if (_documentStore.IsValueCreated)
-                {
-                    _documentStore.Value.Dispose();
-                }
+                DocumentStore.Dispose();
             }
         }
 
         private IDocumentStore CreateDocumentStore()
         {
+            ConfigureServer(new TestServerOptions
+            {
+                Licensing =
+                {
+                    EulaAccepted = true,
+                    LicensePath = RavenDbTestLicenseGetter.GetRavenDbDeveloperLicensePath(),
+                },
+            });
             return GetDocumentStore();
         }
     }

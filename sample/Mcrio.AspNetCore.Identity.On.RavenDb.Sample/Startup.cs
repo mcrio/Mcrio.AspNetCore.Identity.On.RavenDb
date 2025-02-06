@@ -1,7 +1,9 @@
+using System;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 using Mcrio.AspNetCore.Identity.On.RavenDb.RavenDb;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Index;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -27,8 +29,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample
         public void ConfigureServices(IServiceCollection services)
         {
             // Register document store
-            string databaseName = Configuration.GetSection("RavenDbDatabase").Get<string>();
-            IDocumentStore store = new DocumentStore
+            string? databaseName = Configuration.GetSection("RavenDbDatabase").Get<string>();
+            if (string.IsNullOrWhiteSpace(databaseName))
+            {
+                throw new ArgumentNullException(nameof(databaseName), "The databaseName parameter is required.");
+            }
+
+            var store = new DocumentStore
             {
                 Urls = Configuration.GetSection("RavenDbUrls").Get<string[]>(),
                 Database = databaseName,
@@ -36,8 +43,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample
             store.Conventions.FindCollectionName = type =>
             {
                 if (IdentityRavenDbConventions.TryGetCollectionName(
-                    type,
-                    out string? collectionName))
+                        type,
+                        out string? collectionName))
                 {
                     return collectionName;
                 }
@@ -47,7 +54,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample
             store.Initialize();
             store.EnsureDatabaseExists(databaseName, true);
 
-            services.AddSingleton(store);
+            services.AddSingleton<IDocumentStore>(store);
 
             // Register scoped document session
             services.AddScoped(
@@ -63,7 +70,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample
                         options.SignIn.RequireConfirmedEmail = false;
                     }
                 )
-                .AddRavenDbStores<RavenUserStore, RavenRoleStore, RavenIdentityUser, RavenIdentityRole>(
+                .AddRavenDbStores<
+                    RavenUserStore, 
+                    RavenRoleStore, 
+                    RavenIdentityUser, 
+                    RavenIdentityRole,
+                    UsersByClaimIndex,
+                    UsersByClaimIndexEntry>(
                     provider => provider.GetRequiredService<IAsyncDocumentSession>()
                 )
                 .AddDefaultUI()
@@ -90,6 +103,19 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+
+                // Create static indexes
+                string? databaseName = Configuration.GetSection("RavenDbDatabase").Get<string>();
+                if (string.IsNullOrWhiteSpace(databaseName))
+                {
+                    throw new ArgumentNullException(nameof(databaseName), "The databaseName parameter is required.");
+                }
+
+                IDocumentStore documentStore = app.ApplicationServices.GetRequiredService<IDocumentStore>();
+                RavenDbIdentityIndexCreator.CreateIndexes<UsersByClaimIndex>(
+                    documentStore,
+                    databaseName
+                );
             }
             else
             {

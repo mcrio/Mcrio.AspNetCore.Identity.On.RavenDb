@@ -3,6 +3,7 @@ using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 using Mcrio.AspNetCore.Identity.On.RavenDb.RavenDb;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Index;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,20 +34,33 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb
         /// <typeparam name="TRavenRoleStore">Role store type.</typeparam>
         /// <typeparam name="TUser">Identity user type.</typeparam>
         /// <typeparam name="TRole">Identity role type.</typeparam>
+        /// <typeparam name="TUsersByClaimRavenDbIndex">Users by claims static index type. See <see cref="UsersByClaimIndex{TUser}"/> for abstract class implementation.</typeparam>
+        /// <typeparam name="TUsersByClaimRavenDbIndexEntry">Users by claims static index entry type. See <see cref="UsersByClaimIndexEntry"/>.</typeparam>
         /// <returns>Returns the <see cref="IdentityBuilder"/> instance this method extends.</returns>
-        public static IdentityBuilder AddRavenDbStores<TRavenUserStore, TRavenRoleStore, TUser, TRole>(
+        public static IdentityBuilder AddRavenDbStores<
+            TRavenUserStore,
+            TRavenRoleStore,
+            TUser,
+            TRole,
+            TUsersByClaimRavenDbIndex,
+            TUsersByClaimRavenDbIndexEntry>(
             this IdentityBuilder builder,
             DocumentSessionServiceLocator documentSessionServiceLocator,
             Action<UniqueValuesReservationOptions>? uniqueValuesReservationOptionsConfig = null)
-            where TRavenUserStore : RavenUserStore<TUser, TRole, UniqueReservation>
+            where TRavenUserStore : RavenUserStore<TUser, TRole, UniqueReservation, TUsersByClaimRavenDbIndex,
+                TUsersByClaimRavenDbIndexEntry>
             where TRavenRoleStore : RavenRoleStore<TRole, TUser, UniqueReservation>
             where TUser : RavenIdentityUser
             where TRole : RavenIdentityRole
+            where TUsersByClaimRavenDbIndex : UsersByClaimIndex<TUser>, new()
+            where TUsersByClaimRavenDbIndexEntry : UsersByClaimIndexEntry
         {
-            return builder.AddRavenDbStores<TRavenUserStore, TRavenRoleStore, TUser, TRole, UniqueReservation>(
-                documentSessionServiceLocator,
-                uniqueValuesReservationOptionsConfig
-            );
+            return builder
+                .AddRavenDbStores<TRavenUserStore, TRavenRoleStore, TUser, TRole, UniqueReservation,
+                    TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>(
+                    documentSessionServiceLocator,
+                    uniqueValuesReservationOptionsConfig
+                );
         }
 
         /// <summary>
@@ -60,23 +74,31 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb
         /// <typeparam name="TUser">Identity user type.</typeparam>
         /// <typeparam name="TRole">Identity role type.</typeparam>
         /// <typeparam name="TUniqueReservationDoc">Unique values reservation document type.</typeparam>
+        /// <typeparam name="TUsersByClaimRavenDbIndex">Users by claims static index type. See <see cref="UsersByClaimIndex{TUser}"/> for abstract class implementation.</typeparam>
+        /// <typeparam name="TUsersByClaimRavenDbIndexEntry">Users by claims static index entry type. See <see cref="UsersByClaimIndexEntry"/>.</typeparam>
         /// <returns>Returns the <see cref="IdentityBuilder"/> instance this method extends.</returns>
         public static IdentityBuilder AddRavenDbStores<
             TRavenUserStore,
             TRavenRoleStore,
             TUser,
             TRole,
-            TUniqueReservationDoc>(
+            TUniqueReservationDoc,
+            TUsersByClaimRavenDbIndex,
+            TUsersByClaimRavenDbIndexEntry>(
             this IdentityBuilder builder,
             DocumentSessionServiceLocator documentSessionServiceLocator,
             Action<UniqueValuesReservationOptions>? uniqueValuesReservationOptionsConfig = null)
-            where TRavenUserStore : RavenUserStore<TUser, TRole, TUniqueReservationDoc>
+            where TRavenUserStore : RavenUserStore<TUser, TRole, TUniqueReservationDoc, TUsersByClaimRavenDbIndex,
+                TUsersByClaimRavenDbIndexEntry>
             where TRavenRoleStore : RavenRoleStore<TRole, TUser, TUniqueReservationDoc>
             where TUser : RavenIdentityUser
             where TRole : RavenIdentityRole
             where TUniqueReservationDoc : UniqueReservation
+            where TUsersByClaimRavenDbIndex : UsersByClaimIndex<TUser>, new()
+            where TUsersByClaimRavenDbIndexEntry : UsersByClaimIndexEntry
         {
-            AddStores<TRavenUserStore, TRavenRoleStore, TUser, TRole, TUniqueReservationDoc>(
+            AddStores<TRavenUserStore, TRavenRoleStore, TUser, TRole, TUniqueReservationDoc, TUsersByClaimRavenDbIndex,
+                TUsersByClaimRavenDbIndexEntry>(
                 builder.Services,
                 documentSessionServiceLocator,
                 uniqueValuesReservationOptionsConfig
@@ -84,26 +106,33 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb
             return builder;
         }
 
-        private static void AddStores<TRavenUserStore, TRavenRoleStore, TUser, TRole, TUniqueReservationDoc>(
+        private static void AddStores<
+            TRavenUserStore,
+            TRavenRoleStore,
+            TUser,
+            TRole,
+            TUniqueReservationDoc,
+            TUsersByClaimRavenDbIndex,
+            TUsersByClaimRavenDbIndexEntry>(
             IServiceCollection services,
             DocumentSessionServiceLocator documentSessionServiceLocator,
             Action<UniqueValuesReservationOptions>? uniqueValuesReservationOptionsConfig = null)
-            where TRavenUserStore : RavenUserStore<TUser, TRole, TUniqueReservationDoc>
+            where TRavenUserStore : RavenUserStore<TUser, TRole, TUniqueReservationDoc, TUsersByClaimRavenDbIndex,
+                TUsersByClaimRavenDbIndexEntry>
             where TRavenRoleStore : RavenRoleStore<TRole, TUser, TUniqueReservationDoc>
             where TUser : RavenIdentityUser
             where TRole : RavenIdentityRole
             where TUniqueReservationDoc : UniqueReservation
+            where TUsersByClaimRavenDbIndex : UsersByClaimIndex<TUser>, new()
+            where TUsersByClaimRavenDbIndexEntry : UsersByClaimIndexEntry
         {
-            if (documentSessionServiceLocator == null)
-            {
-                throw new ArgumentNullException(nameof(documentSessionServiceLocator));
-            }
+            ArgumentNullException.ThrowIfNull(documentSessionServiceLocator);
 
             var uniqueValueRelatedOptions = new UniqueValuesReservationOptions();
             uniqueValuesReservationOptionsConfig?.Invoke(uniqueValueRelatedOptions);
             services.TryAddSingleton(uniqueValueRelatedOptions);
 
-            services.TryAddTransient(provider => new IdentityErrorDescriber());
+            services.TryAddTransient(_ => new IdentityErrorDescriber());
 
             services.TryAddScoped<IdentityDocumentSessionProvider>(
                 provider => () => documentSessionServiceLocator(provider)

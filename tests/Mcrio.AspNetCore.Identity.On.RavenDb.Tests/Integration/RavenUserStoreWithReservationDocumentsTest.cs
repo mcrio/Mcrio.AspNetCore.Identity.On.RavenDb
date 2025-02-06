@@ -8,6 +8,7 @@ using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Claims;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Index;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
@@ -27,11 +28,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         [Fact]
         public async Task UserStoreMethodsThrowWhenDisposedTest()
         {
-            var store = new RavenUserStore<RavenIdentityUser, RavenIdentityRole>(
+            var store = new RavenUserStore<RavenIdentityUser, RavenIdentityRole, UsersByClaimIndex, UsersByClaimIndexEntry>(
                 () => new Mock<IAsyncDocumentSession>().Object,
                 new IdentityErrorDescriber(),
                 Options.Create(new IdentityOptions()),
-                new Mock<ILogger<RavenUserStore<RavenIdentityUser, RavenIdentityRole>>>().Object,
+                new Mock<ILogger<RavenUserStore<RavenIdentityUser, RavenIdentityRole, UsersByClaimIndex, UsersByClaimIndexEntry>>>().Object,
                 UniquesUsingReservationDocuments()
             );
 
@@ -92,11 +93,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         [Fact]
         public async Task UserStorePublicNullCheckTest()
         {
-            var store = new RavenUserStore<RavenIdentityUser, RavenIdentityRole>(
+            var store = new RavenUserStore<RavenIdentityUser, RavenIdentityRole, UsersByClaimIndex, UsersByClaimIndexEntry>(
                 () => new Mock<IAsyncDocumentSession>().Object,
                 new IdentityErrorDescriber(),
                 Options.Create(new IdentityOptions()),
-                new Mock<ILogger<RavenUserStore<RavenIdentityUser, RavenIdentityRole>>>().Object,
+                new Mock<ILogger<RavenUserStore<RavenIdentityUser, RavenIdentityRole, UsersByClaimIndex, UsersByClaimIndexEntry>>>().Object,
                 UniquesUsingReservationDocuments()
             );
             await Assert.ThrowsAsync<ArgumentNullException>(
@@ -819,6 +820,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 claim1Type: "type3993",
                 claim1Value: "value",
                 claim2Type: "c2type",
+                claim2Value: "c2value"
+            );
+            await SeedUserWithTwoRolesAndTwoClaims(
+                userName: Guid.NewGuid().ToString(),
+                claim1Type: "type",
+                claim1Value: "value12345",
+                claim2Type: "type",
                 claim2Value: "c2value"
             );
             await SeedUserWithTwoRolesAndTwoClaims(

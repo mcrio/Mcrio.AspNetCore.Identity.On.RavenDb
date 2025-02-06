@@ -1,6 +1,7 @@
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Index;
 using Microsoft.AspNetCore.Identity;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
@@ -13,7 +14,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
             RoleManager<RavenIdentityRole> roleManager,
             UserManager<RavenIdentityUser> userManager,
             IDocumentStore documentStore,
-            RavenUserStore<RavenIdentityUser, RavenIdentityRole> userStore,
+            RavenUserStore userStore,
             RavenRoleStore<RavenIdentityRole, RavenIdentityUser> roleStore,
             IAsyncDocumentSession documentSession)
         {
@@ -31,7 +32,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
 
         internal IDocumentStore DocumentStore { get; }
 
-        internal RavenUserStore<RavenIdentityUser, RavenIdentityRole> UserStore { get; }
+        internal RavenUserStore UserStore { get; }
 
         internal RavenRoleStore<RavenIdentityRole, RavenIdentityUser> RoleStore { get; }
 

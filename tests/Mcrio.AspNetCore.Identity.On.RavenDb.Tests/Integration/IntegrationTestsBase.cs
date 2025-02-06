@@ -5,6 +5,7 @@ using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 using Mcrio.AspNetCore.Identity.On.RavenDb.RavenDb;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Index;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,18 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         where TRole : RavenIdentityRole
     {
         private IDocumentStore? _documentStore;
+
+        static IntegrationTestsBase()
+        {
+            ConfigureServer(new TestServerOptions
+            {
+                Licensing =
+                {
+                    EulaAccepted = true,
+                    LicensePath = RavenDbTestLicenseGetter.GetRavenDbDeveloperLicensePath(),
+                },
+            });
+        }
 
         protected override void PreInitialize(IDocumentStore documentStore)
         {
@@ -46,6 +59,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
         )
         {
             _documentStore ??= GetDocumentStore();
+            RavenDbIdentityIndexCreator.CreateIndexes<UsersByClaimIndex>(_documentStore, _documentStore.Database);
 
             var serviceCollection = new ServiceCollection();
 
@@ -66,7 +80,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                     options.User.RequireUniqueEmail = requireUniqueEmail;
                     options.Stores.ProtectPersonalData = protectPersonalData;
                 })
-                .AddRavenDbStores<RavenUserStore, RavenRoleStore, RavenIdentityUser, RavenIdentityRole>(
+                .AddRavenDbStores<
+                    RavenUserStore,
+                    RavenRoleStore,
+                    RavenIdentityUser,
+                    RavenIdentityRole,
+                    UsersByClaimIndex,
+                    UsersByClaimIndexEntry>(
                     provider => provider.GetRequiredService<IAsyncDocumentSession>(),
                     uniqueValuesReservationOptionsConfig
                 )
@@ -78,7 +98,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
                 serviceProvider.GetRequiredService<RoleManager<RavenIdentityRole>>(),
                 serviceProvider.GetRequiredService<UserManager<RavenIdentityUser>>(),
                 _documentStore,
-                (RavenUserStore<RavenIdentityUser, RavenIdentityRole>)serviceProvider
+                (RavenUserStore)serviceProvider
                     .GetRequiredService<IUserStore<RavenIdentityUser>>(),
                 (RavenRoleStore<RavenIdentityRole, RavenIdentityUser>)serviceProvider
                     .GetRequiredService<IRoleStore<RavenIdentityRole>>(),

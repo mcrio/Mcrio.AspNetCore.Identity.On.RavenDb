@@ -12,6 +12,7 @@ using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 using Mcrio.AspNetCore.Identity.On.RavenDb.RavenDb;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Extensions;
+using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Index;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
@@ -26,7 +27,8 @@ using Raven.Client.Exceptions;
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 {
     /// <inheritdoc />
-    public class RavenUserStore : RavenUserStore<RavenIdentityUser, RavenIdentityRole>
+    public class RavenUserStore : RavenUserStore<RavenIdentityUser, RavenIdentityRole, UsersByClaimIndex,
+        UsersByClaimIndexEntry>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenUserStore"/> class.
@@ -48,12 +50,15 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
     }
 
     /// <inheritdoc />
-    public class RavenUserStore<TUser, TRole> : RavenUserStore<TUser, TRole, UniqueReservation>
+    public class RavenUserStore<TUser, TRole, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>
+        : RavenUserStore<TUser, TRole, UniqueReservation, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>
         where TUser : RavenIdentityUser
         where TRole : RavenIdentityRole
+        where TUsersByClaimRavenDbIndex : UsersByClaimIndex<TUser>, new()
+        where TUsersByClaimRavenDbIndexEntry : UsersByClaimIndexEntry
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TRole}"/> class.
+        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TRole, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry}"/> class.
         /// </summary>
         /// <param name="identityDocumentSessionProvider">Identity document session provider.</param>
         /// <param name="describer">Error describer.</param>
@@ -64,7 +69,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             IdentityDocumentSessionProvider identityDocumentSessionProvider,
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
-            ILogger<RavenUserStore<TUser, TRole>> logger,
+            ILogger<RavenUserStore<TUser, TRole, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>> logger,
             UniqueValuesReservationOptions uniqueValuesReservationOptions)
             : base(
                 identityDocumentSessionProvider,
@@ -93,14 +98,19 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
     }
 
     /// <inheritdoc />
-    public abstract class RavenUserStore<TUser, TRole, TUniqueReservation> : RavenUserStore<TUser, RavenIdentityClaim,
-        RavenIdentityToken, RavenIdentityUserLogin, TRole, RavenIdentityClaim, TUniqueReservation>
+    public abstract class RavenUserStore<TUser, TRole, TUniqueReservation, TUsersByClaimRavenDbIndex,
+        TUsersByClaimRavenDbIndexEntry> : RavenUserStore<
+        TUser, RavenIdentityClaim,
+        RavenIdentityToken, RavenIdentityUserLogin, TRole, RavenIdentityClaim, TUniqueReservation,
+        TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>
         where TUser : RavenIdentityUser
         where TRole : RavenIdentityRole
         where TUniqueReservation : UniqueReservation
+        where TUsersByClaimRavenDbIndex : UsersByClaimIndex<TUser>, new()
+        where TUsersByClaimRavenDbIndexEntry : UsersByClaimIndexEntry
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TRole,TUniqueReservation}"/> class.
+        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TRole,TUniqueReservation, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry}"/> class.
         /// </summary>
         /// <param name="identityDocumentSessionProvider">Identity document session provider.</param>
         /// <param name="describer">Error describer.</param>
@@ -111,7 +121,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             IdentityDocumentSessionProvider identityDocumentSessionProvider,
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
-            ILogger<RavenUserStore<TUser, TRole, TUniqueReservation>> logger,
+            ILogger<RavenUserStore<TUser, TRole, TUniqueReservation, TUsersByClaimRavenDbIndex,
+                TUsersByClaimRavenDbIndexEntry>> logger,
             UniqueValuesReservationOptions uniqueValuesReservationOptions)
             : base(
                 identityDocumentSessionProvider(),
@@ -151,10 +162,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
     /// <inheritdoc />
     public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim,
-        TUniqueReservation>
+        TUniqueReservation, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>
         : RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim, IdentityUserClaim<string>,
             IdentityUserRole<string>, IdentityUserLogin<string>, IdentityUserToken<string>,
-            IdentityRoleClaim<string>, TUniqueReservation>
+            IdentityRoleClaim<string>, TUniqueReservation, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>
         where TUser : RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
         where TRole : RavenIdentityRole<TRoleClaim>
         where TUserClaim : RavenIdentityClaim
@@ -162,9 +173,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         where TUserToken : RavenIdentityToken
         where TUserLogin : RavenIdentityUserLogin
         where TUniqueReservation : UniqueReservation
+        where TUsersByClaimRavenDbIndex : UsersByClaimIndex<
+            TUser, TUserClaim, TUserLogin, TUserToken
+        >, new()
+        where TUsersByClaimRavenDbIndexEntry : UsersByClaimIndexEntry
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim,TUniqueReservation}"/> class.
+        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim,TUniqueReservation, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry}"/> class.
         /// </summary>
         /// <param name="documentSession">Document session.</param>
         /// <param name="describer">Error describer.</param>
@@ -175,7 +190,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             IAsyncDocumentSession documentSession,
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
-            ILogger<RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim, TUniqueReservation>>
+            ILogger<RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim, TUniqueReservation,
+                    TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>>
                 logger,
             UniqueValuesReservationOptions uniqueValuesReservationOptions)
             : base(documentSession, describer, optionsAccessor, logger, uniqueValuesReservationOptions)
@@ -185,7 +201,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
     /// <inheritdoc />
     public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim,
-        TAspUserClaim, TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim, TUniqueReservation> :
+        TAspUserClaim, TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim, TUniqueReservation,
+        TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry> :
         UserStoreBase<TUser, TRole, string, TAspUserClaim, TAspUserRole, TAspUserLogin,
             TAspUserToken, TAspRoleClaim>
         where TUser : RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
@@ -200,9 +217,13 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         where TAspUserToken : IdentityUserToken<string>, new()
         where TAspRoleClaim : IdentityRoleClaim<string>, new()
         where TUniqueReservation : UniqueReservation
+        where TUsersByClaimRavenDbIndex : UsersByClaimIndex<
+            TUser, TUserClaim, TUserLogin, TUserToken
+        >, new()
+        where TUsersByClaimRavenDbIndexEntry : UsersByClaimIndexEntry
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim,TAspUserClaim,TAspUserRole,TAspUserLogin,TAspUserToken,TAspRoleClaim,TUniqueReservation}"/> class.
+        /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim,TAspUserClaim,TAspUserRole,TAspUserLogin,TAspUserToken,TAspRoleClaim,TUniqueReservation, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry}"/> class.
         /// </summary>
         /// <param name="documentSession">Document session.</param>
         /// <param name="describer">Error describer.</param>
@@ -214,7 +235,8 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
             IdentityErrorDescriber describer,
             IOptions<IdentityOptions> optionsAccessor,
             ILogger<RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim, TAspUserClaim,
-                    TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim, TUniqueReservation>>
+                    TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim, TUniqueReservation,
+                    TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>>
                 logger,
             UniqueValuesReservationOptions uniqueValuesReservationOptions)
             : base(describer)
@@ -252,8 +274,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
         /// Logger.
         /// </summary>
         protected ILogger<RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim,
-            TAspUserClaim,
-            TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim, TUniqueReservation>> Logger { get; }
+                TAspUserClaim,
+                TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim, TUniqueReservation,
+                TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>>
+            Logger { get; }
 
         /// <summary>
         /// Gets the unique value representation options.
@@ -824,10 +848,10 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores
 
             ThrowIfCancelledOrDisposed(cancellationToken);
 
-            IQueryable<TUser> query = Queryable.Where(
-                DocumentSession.Query<TUser>(),
-                user => user.Claims.Any(item => item.Type == claim.Type && item.Value == claim.Value)
-            );
+            IQueryable<TUser> query = DocumentSession
+                .Query<TUsersByClaimRavenDbIndexEntry, TUsersByClaimRavenDbIndex>()
+                .Where(index => index.ClaimType == claim.Type && index.ClaimValue == claim.Value)
+                .OfType<TUser>();
 
             IAsyncEnumerator<StreamResult<TUser>> streamResult = await DocumentSession
                 .Advanced

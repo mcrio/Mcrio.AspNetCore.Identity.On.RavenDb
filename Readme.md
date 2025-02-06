@@ -12,9 +12,9 @@ by the official EntityFramework stores.
 
 #### Why implementing another RavenDB store solution as there were at lest two more related projects at that point?
 At the time this solution was implemented the other projects were not flexible enough for 
-my requirements in terms of ID generation, how uniques are handled, direct injection of IAsyncDocumentSession, and extensibility overall as
-this project was required to be extensible to a multi-tenant store.
-_(I am writing this document more than a year later so there may have been other reasons I don't remember any more)._
+my requirements in terms of ID generation, how uniques are handled, the way IAsyncDocumentSession was directly injected, 
+and extensibility overall as this project was required to be extensible to a multi-tenant store.
+_(I am writing this document more than a year later so there may have been other reasons I cannot recall anymore)._
 
 ### (*) Missing functionality compared to official EF Core store implementation
 
@@ -38,28 +38,29 @@ $ dotnet run -p sample/Mcrio.AspNetCore.Identity.On.RavenDB.Sample/Mcrio.AspNetC
 
 4. Open in browser: https://localhost:5001
 
-// RavenDB Studio is available at: http://localhost:32779
+// RavenDB Studio is available at: http://localhost:32921
 // If you want to try the Facebook login you need to provide
 // the Facebook app id and secret in appsettings.json
 ```
 
 ### NuGet Package
 
-Using the NuGet package manager install the [Mcrio.AspNetCore.Identity.On.RavenDb](https://www.nuget.org/packages/Mcrio.AspNetCore.Identity.On.RavenDb/) package, or add the following line to the .csproj file:
-
-```xml
-<ItemGroup>
-    <PackageReference Include="Mcrio.AspNetCore.Identity.On.RavenDb"></PackageReference>
-</ItemGroup>
-```
+Install NuGet package [Mcrio.AspNetCore.Identity.On.RavenDb](https://www.nuget.org/packages/Mcrio.AspNetCore.Identity.On.RavenDb/).
 
 ## Usage
+
+### RavenDB Static Indexes
+
+This package requires one static Index, due to RavenDB currently not supporting `intersect` queries in their
+Corax search engine. 
+
+- See index base classes and implementation at [UsersByClaimIndex](src/Mcrio.AspNetCore.Identity.On.RavenDb/Stores/Index/UsersByClaimIndex.cs) 
 
 ### Simple usage
 
 Add the following lines to Startup.cs.
-```c# 
-// ConfigureServices(...)
+```csharp
+/** ConfigureServices()... **/
 services
     // Add identity by providing RavenDB stores related types
     .AddIdentity<RavenIdentityUser, RavenIdentityRole>(
@@ -70,15 +71,32 @@ services
         }
     )
     // Adds the RavenDB stores
-    .AddRavenDbStores<RavenUserStore, RavenRoleStore, RavenIdentityUser, RavenIdentityRole>(
+    .AddRavenDbStores<
+        RavenUserStore, 
+        RavenRoleStore, 
+        RavenIdentityUser, 
+        RavenIdentityRole,
+        UsersByClaimIndex,
+        UsersByClaimIndexEntry>(
         // define how IAsyncDocumentSession is resolved from DI
         // as library does NOT directly inject IAsyncDocumentSession
         provider => provider.GetRequiredService<IAsyncDocumentSession>()
     )
     .AddDefaultUI()
     .AddDefaultTokenProviders();
-    
-// Configure(...) 
+```
+```csharp
+/** Configure()... **/ 
+if (env.IsDevelopment())
+{
+    // Create static indexes when in development environment
+    IDocumentStore documentStore = app.ApplicationServices.GetRequiredService<IDocumentStore>();
+    RavenDbIdentityIndexCreator.CreateIndexes<UsersByClaimIndex>(
+        documentStore,
+        "databaseNameHere"
+    );
+}
+
 // - Put between UseRouting() and UseEndpoints()
 // - Refer to official asp.net documentation for more details
 app.UseAuthentication();
@@ -97,10 +115,11 @@ Note: Use ASP.Identity `UserManager` and `RoleManager` to manipulate user and ro
 
 ### Unique values
 
-Unique usernames are stores in the compare exchange.
+Based on the configuration unique usernames are stored in the compare exchange or as separate documents
+with atomic guards.
 
-When unique email is required it will be stored
-in the compare exchange to ensure uniqueness, otherwise there will be no compare exchange entry.
+When unique email is required, based on configuration it will be stored in the compare exchange
+or separate document with atomic guards, otherwise there will be no compare exchange entry.
 
 (*) Making the emails required at a later stage (when there already are users registered) is not recommended
 as the compare exchange will not have the existing emails registered. Technically it should work fine as 
