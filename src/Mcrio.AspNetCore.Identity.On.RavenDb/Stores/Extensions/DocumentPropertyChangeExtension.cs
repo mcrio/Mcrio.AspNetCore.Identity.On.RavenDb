@@ -38,9 +38,7 @@ internal static class DocumentPropertyChangeExtension
         IDictionary<string, DocumentsChanges[]> whatChanged = documentSession.Advanced.WhatChanged();
         string entityId = entity.Id;
 
-#pragma warning disable SA1011
         if (whatChanged.TryGetValue(entityId, out DocumentsChanges[]? documentChanges))
-#pragma warning restore SA1011
         {
             DocumentsChanges? change = documentChanges?
                 .FirstOrDefault(changes =>

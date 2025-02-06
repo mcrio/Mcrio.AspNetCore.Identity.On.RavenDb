@@ -21,25 +21,29 @@ public class RavenIdentityToken
     }
 
     /// <summary>
+    /// Required for object mapping.
     /// Initializes a new instance of the <see cref="RavenIdentityToken"/> class.
     /// </summary>
+    /// ReSharper disable once UnusedMember.Local
+#pragma warning disable CS8618, CS9264
     private RavenIdentityToken()
+#pragma warning restore CS8618, CS9264
     {
     }
 
     /// <summary>
     /// Sets the LoginProvider this token is from.
     /// </summary>
-    public string LoginProvider { get; private set; } = null!;
+    public string LoginProvider { get; private set; }
 
     /// <summary>
     /// Sets the name of the token.
     /// </summary>
-    public string Name { get; private set; } = null!;
+    public string Name { get; private set; }
 
     /// <summary>
     /// Sets the token value.
     /// </summary>
     [ProtectedPersonalData]
-    public string Value { get; private set; } = null!;
+    public string Value { get; private set; }
 }

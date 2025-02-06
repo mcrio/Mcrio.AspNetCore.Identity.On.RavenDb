@@ -17,5 +17,5 @@ public class UniqueValuesReservationOptions
     ///
     /// NOTE: Change with caution if already in production!.
     /// </summary>
-    public bool UseReservationDocumentsForUniqueValues { get; set; } = false;
+    public bool UseReservationDocumentsForUniqueValues { get; set; }
 }

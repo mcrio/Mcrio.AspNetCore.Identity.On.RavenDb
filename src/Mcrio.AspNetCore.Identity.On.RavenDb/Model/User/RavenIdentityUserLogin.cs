@@ -18,7 +18,13 @@ public class RavenIdentityUserLogin
         ProviderDisplayName = displayName;
     }
 
+    /// <summary>
+    /// Required for object mapping.
+    /// </summary>
+    /// ReSharper disable once UnusedMember.Local
+#pragma warning disable CS8618, CS9264
     private RavenIdentityUserLogin()
+#pragma warning restore CS8618, CS9264
     {
     }
 
@@ -29,7 +35,7 @@ public class RavenIdentityUserLogin
     /// <remarks>
     /// Examples of the provider may be Local, Facebook, Google, etc.
     /// </remarks>
-    public string LoginProvider { get; private set; } = default!;
+    public string LoginProvider { get; private set; }
 
     /// <summary>
     /// Sets the unique identifier for the user identity user provided by the login provider.
@@ -40,7 +46,7 @@ public class RavenIdentityUserLogin
     /// <remarks>
     /// This would be unique per provider, examples may be @microsoft as a Twitter provider key.
     /// </remarks>
-    public string ProviderKey { get; private set; } = default!;
+    public string ProviderKey { get; private set; }
 
     /// <summary>
     /// Sets the display name for the provider.
@@ -48,5 +54,5 @@ public class RavenIdentityUserLogin
     /// <value>
     /// The display name for the provider.
     /// </value>
-    public string ProviderDisplayName { get; private set; } = default!;
+    public string ProviderDisplayName { get; private set; }
 }

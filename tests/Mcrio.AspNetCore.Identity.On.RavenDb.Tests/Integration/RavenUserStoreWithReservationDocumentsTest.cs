@@ -189,7 +189,7 @@ public class RavenUserStoreWithReservationDocumentsTest : IntegrationTestsBase<R
         await Assert.ThrowsAsync<ArgumentNullException>(
             "login",
             async () => await store.AddLoginAsync(
-                new RavenIdentityUser("fake"), null!
+                new RavenIdentityUser("123", "fake"), null!
             )
         );
         await Assert.ThrowsAsync<ArgumentNullException>(

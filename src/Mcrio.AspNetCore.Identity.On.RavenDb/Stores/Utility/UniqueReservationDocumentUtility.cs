@@ -132,7 +132,7 @@ public abstract class UniqueReservationDocumentUtility<TReservation>
     /// Load reservation document.
     /// </summary>
     /// <returns>Reservation document.</returns>
-    public async Task<TReservation> LoadReservationAsync()
+    public async Task<TReservation?> LoadReservationAsync()
     {
         string reservationDocumentId = GetReservationDocumentId(_uniqueValue);
         TReservation? reservation = await _session
@@ -197,7 +197,7 @@ public abstract class UniqueReservationDocumentUtility<TReservation>
             UniqueReservationType.Username => "uname",
             UniqueReservationType.Email => "email",
             UniqueReservationType.Login => "login",
-            _ => throw new Exception($"Unhandled reservation type {reservationType}")
+            _ => throw new Exception($"Unhandled reservation type {reservationType}"),
         };
     }
 

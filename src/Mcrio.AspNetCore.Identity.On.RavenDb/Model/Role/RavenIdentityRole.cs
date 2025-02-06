@@ -53,10 +53,10 @@ public abstract class RavenIdentityRole<TRoleClaim> : IdentityRole<string>, ICla
     /// <summary>
     /// Gets the entity Id value.
     /// </summary>
-    public sealed override string Id { get; set; } = default!;
+    public sealed override required string Id { get; set; }
 
     /// <inheritdoc/>
-    public override string ConcurrencyStamp { get; set; } = string.Empty;
+    public override string? ConcurrencyStamp { get; set; } = string.Empty;
 
     /// <inheritdoc/>
     public IReadOnlyList<TRoleClaim> Claims { get; private set; } =

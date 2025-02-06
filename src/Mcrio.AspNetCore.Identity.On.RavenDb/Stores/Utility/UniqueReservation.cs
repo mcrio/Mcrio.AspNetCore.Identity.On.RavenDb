@@ -17,11 +17,11 @@ public class UniqueReservation
     }
 
     /// <summary>
-    /// Required for ORM.
+    /// Required for object mapping.
     /// </summary>
-#pragma warning disable CS8618
+#pragma warning disable CS8618, CS9264
     protected UniqueReservation()
-#pragma warning restore CS8618
+#pragma warning restore CS8618, CS9264
     {
     }
 

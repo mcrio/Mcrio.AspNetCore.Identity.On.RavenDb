@@ -28,19 +28,25 @@ public class RavenIdentityClaim
     {
     }
 
+    /// <summary>
+    /// Required for object mapping.
+    /// </summary>
+    /// ReSharper disable once UnusedMember.Local
+#pragma warning disable CS8618, CS9264
     private RavenIdentityClaim()
+#pragma warning restore CS8618, CS9264
     {
     }
 
     /// <summary>
     /// Gets the claim type for this claim.
     /// </summary>
-    public string Type { get; private set; } = null!;
+    public string Type { get; private set; }
 
     /// <summary>
     /// Gets the claim value for this claim.
     /// </summary>
-    public string Value { get; private set; } = null!;
+    public string Value { get; private set; }
 
     /// <summary>
     /// Constructs a new claim with the type and value.

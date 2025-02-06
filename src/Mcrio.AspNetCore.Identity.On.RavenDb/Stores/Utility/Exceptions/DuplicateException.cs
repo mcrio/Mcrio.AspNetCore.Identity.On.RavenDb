@@ -5,7 +5,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Utility.Exceptions;
 /// <summary>
 /// Duplicate document exception.
 /// </summary>
-public class DuplicateException : Exception
+public sealed class DuplicateException : Exception
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DuplicateException"/> class.

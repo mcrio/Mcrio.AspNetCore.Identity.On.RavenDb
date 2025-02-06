@@ -98,7 +98,8 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
             () => new Mock<IAsyncDocumentSession>().Object,
             new IdentityErrorDescriber(),
             Options.Create(new IdentityOptions()),
-            new Mock<ILogger<RavenUserStore<RavenIdentityUser, RavenIdentityRole, UsersByClaimIndex, UsersByClaimIndexEntry>>>().Object,
+            new Mock<ILogger<RavenUserStore<RavenIdentityUser, RavenIdentityRole, UsersByClaimIndex,
+                UsersByClaimIndexEntry>>>().Object,
             UniquesUsingCompareExchange()
         );
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -185,12 +186,12 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         );
         await Assert.ThrowsAsync<ArgumentNullException>(
             "user",
-            async () => await store.SetSecurityStampAsync(null!, null)
+            async () => await store.SetSecurityStampAsync(null!, null!)
         );
         await Assert.ThrowsAsync<ArgumentNullException>(
             "login",
             async () => await store.AddLoginAsync(
-                new RavenIdentityUser("fake")!, null!
+                new RavenIdentityUser("123", "fake"), null!
             )
         );
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -296,12 +297,14 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     public async Task ShouldCrateUserUsingUserManager()
     {
         var requireUniqueEmail = false;
-        var scope = NewServiceScope(requireUniqueEmail);
-        var manager = scope.UserManager;
+        ServiceScope scope = NewServiceScope(requireUniqueEmail);
+        UserManager<RavenIdentityUser> manager = scope.UserManager;
         RavenIdentityUser user = CreateTestUser(email: "foo@bar.com");
         IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
         WaitForIndexing(scope.DocumentStore);
-        (await NewServiceScope().UserManager.FindByNameAsync(user.UserName)).Should().NotBeNull();
+        (await NewServiceScope().UserManager.FindByNameAsync(user.UserName ??
+                                                             throw new Exception("Username expected not to be null")))
+            .Should().NotBeNull();
         (await NewServiceScope().UserManager.FindByIdAsync(user.Id)).Should().NotBeNull();
 
         await AssertCompareExchangeKeyExistsAsync(
@@ -319,8 +322,8 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     [Fact]
     public async Task ShouldCrateUserWithIdNullUsingUserManager()
     {
-        var scope = NewServiceScope();
-        var manager = scope.UserManager;
+        ServiceScope scope = NewServiceScope();
+        UserManager<RavenIdentityUser> manager = scope.UserManager;
         RavenIdentityUser user = CreateTestUser(email: "foo@bar.com");
         user.Id = null!;
 
@@ -353,9 +356,9 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
             await NewServiceScope().UserManager.CreateAsync(CreateTestUser("username-3"))
         );
 
-        var scope = NewServiceScope();
-        var store = scope.UserStore;
-        var user = CreateTestUser("username-2");
+        ServiceScope scope = NewServiceScope();
+        RavenUserStore store = scope.UserStore;
+        RavenIdentityUser user = CreateTestUser("username-2");
 
         (await store.CreateAsync(user)).Succeeded.Should().BeFalse("because username is already taken");
 
@@ -370,7 +373,7 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     public async Task ShouldNotCrateUserIfEmailTakenAndRequireUniqueEmailUsingStore()
     {
         const bool requireUniqueEmail = true;
-        var manager = NewServiceScope(requireUniqueEmail).UserManager;
+        UserManager<RavenIdentityUser> manager = NewServiceScope(requireUniqueEmail).UserManager;
         IdentityResultAssert.IsSuccess(
             await manager.CreateAsync(
                 CreateTestUser("username", "foo@bar.com")
@@ -387,9 +390,9 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
             )
         );
 
-        var scope = NewServiceScope(requireUniqueEmail);
-        var store = scope.UserStore;
-        var user = CreateTestUser("some-user", "foo2@bar.com");
+        ServiceScope scope = NewServiceScope(requireUniqueEmail);
+        RavenUserStore store = scope.UserStore;
+        RavenIdentityUser user = CreateTestUser("some-user", "foo2@bar.com");
 
         (await store.CreateAsync(user)).Succeeded.Should().BeFalse("username is already taken");
 
@@ -411,15 +414,18 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     public async Task ShouldRemoveUserAndAddAgainUsingManager()
     {
         const bool requiredEmail = true;
-        var scope = NewServiceScope(requiredEmail);
-        var manager = scope.UserManager;
-        var user = CreateTestUser("username", "foo@bar.com");
+        ServiceScope scope = NewServiceScope(requiredEmail);
+        UserManager<RavenIdentityUser> manager = scope.UserManager;
+        RavenIdentityUser user = CreateTestUser("username", "foo@bar.com");
         IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
         WaitForIndexing(scope.DocumentStore);
 
         (await NewServiceScope().UserManager.FindByIdAsync(user.Id)).Should().NotBeNull();
-        (await NewServiceScope().UserManager.FindByNameAsync(user.UserName)).Should().NotBeNull();
-        (await NewServiceScope().UserManager.FindByEmailAsync(user.Email)).Should().NotBeNull();
+        (await NewServiceScope().UserManager
+                .FindByNameAsync(user.UserName ?? throw new Exception("Username expected not to be null"))).Should()
+            .NotBeNull();
+        (await NewServiceScope().UserManager
+            .FindByEmailAsync(user.Email ?? throw new Exception("Email expected not to be null"))).Should().NotBeNull();
 
         await AssertCompareExchangeKeyExistsAsync("idnt/uname/username", "user was created");
         await AssertCompareExchangeKeyExistsAsync("idnt/email/foo@bar.com", "user was created");
@@ -436,8 +442,8 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         await AssertCompareExchangeKeyDoesNotExistAsync("idnt/email/foo@bar.com", "user was deleted");
 
         // reinsert user
-        var scope2 = NewServiceScope(requiredEmail);
-        var manager2 = scope2.UserManager;
+        ServiceScope scope2 = NewServiceScope(requiredEmail);
+        UserManager<RavenIdentityUser> manager2 = scope2.UserManager;
         IdentityResultAssert.IsSuccess(await manager2.CreateAsync(user));
         WaitForIndexing(scope2.DocumentStore);
 
@@ -453,24 +459,35 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     [Fact]
     public async Task ShouldAddUserLoginUsingStore()
     {
-        var user = CreateTestUser();
+        RavenIdentityUser user = CreateTestUser();
         user.Logins.Count.Should().Be(0);
 
         (await NewServiceScope().UserManager.CreateAsync(user))
             .Succeeded
             .Should().BeTrue();
 
-        var scope = NewServiceScope();
-        var store = scope.UserStore;
+        ServiceScope scope = NewServiceScope();
+        RavenUserStore store = scope.UserStore;
 
-        var userRetrieved1 = await store.FindByIdAsync(user.Id);
+        RavenIdentityUser? userRetrieved1 = await store.FindByIdAsync(user.Id);
+
+        if (userRetrieved1 == null)
+        {
+            Assert.Fail("User does not exist");
+        }
+
         await store.AddLoginAsync(userRetrieved1, new UserLoginInfo("provider", "key", "name"));
         await store.AddLoginAsync(userRetrieved1, new UserLoginInfo("provider2", "key2", "name2"));
         await store.UpdateAsync(userRetrieved1);
 
-        var manager2 = NewServiceScope().UserManager;
-        var userRetrieved2 = await manager2.FindByIdAsync(user.Id);
+        UserManager<RavenIdentityUser> manager2 = NewServiceScope().UserManager;
+        RavenIdentityUser? userRetrieved2 = await manager2.FindByIdAsync(user.Id);
         userRetrieved2.Should().NotBeNull();
+
+        if (userRetrieved2 == null)
+        {
+            Assert.Fail("User does not exist");
+        }
 
         userRetrieved2.Logins.Count.Should().Be(2);
         userRetrieved2.Logins
@@ -487,10 +504,10 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     [Fact]
     public async Task ShouldNotAddUserLoginIfOneAlreadyExistsWithSameProviderAndKeyUsingStore()
     {
-        var scope = NewServiceScope();
-        var manager = scope.UserManager;
+        ServiceScope scope = NewServiceScope();
+        UserManager<RavenIdentityUser> manager = scope.UserManager;
 
-        var user = CreateTestUser();
+        RavenIdentityUser user = CreateTestUser();
         user.Logins.Count.Should().Be(0);
 
         await manager.CreateAsync(user);
@@ -498,17 +515,23 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
             .Succeeded
             .Should().BeTrue();
 
-        var scope2 = NewServiceScope();
-        var manager2 = scope2.UserManager;
-        var store2 = scope2.UserStore;
-        var anotherUser = CreateTestUser();
+        ServiceScope scope2 = NewServiceScope();
+        UserManager<RavenIdentityUser> manager2 = scope2.UserManager;
+        RavenUserStore store2 = scope2.UserStore;
+        RavenIdentityUser anotherUser = CreateTestUser();
         anotherUser.Logins.Count.Should().Be(0);
 
         (await manager2.CreateAsync(anotherUser)).Succeeded.Should().BeTrue();
         await store2.AddLoginAsync(anotherUser, new UserLoginInfo("provider", "key", "name2"));
         (await store2.UpdateAsync(anotherUser)).Succeeded.Should().BeTrue();
 
-        var anotherUserRetrieved = await NewServiceScope().UserManager.FindByIdAsync(anotherUser.Id);
+        RavenIdentityUser? anotherUserRetrieved = await NewServiceScope().UserManager.FindByIdAsync(anotherUser.Id);
+
+        if (anotherUserRetrieved == null)
+        {
+            Assert.Fail("User does not exist");
+        }
+
         anotherUserRetrieved.Logins.Count.Should().Be(0);
 
         await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", user.Id);
@@ -517,10 +540,10 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     [Fact]
     public async Task ShouldNotAddDuplicateUserLoginIfAlreadyExistsWithSameProviderAndKeyUsingManager()
     {
-        var scope = NewServiceScope();
-        var manager = scope.UserManager;
+        ServiceScope scope = NewServiceScope();
+        UserManager<RavenIdentityUser> manager = scope.UserManager;
 
-        var user = CreateTestUser();
+        RavenIdentityUser user = CreateTestUser();
         (await manager.CreateAsync(user)).Succeeded.Should().BeTrue();
 
         await manager.AddLoginAsync(user, new UserLoginInfo("provider", "key", "displayName"));
@@ -530,10 +553,16 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", user.Id);
         await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider2/key2", user.Id);
 
-        var scope2 = NewServiceScope();
-        var manager2 = scope2.UserManager;
+        ServiceScope scope2 = NewServiceScope();
+        UserManager<RavenIdentityUser> manager2 = scope2.UserManager;
 
-        var retrievedUser = await manager2.FindByIdAsync(user.Id);
+        RavenIdentityUser? retrievedUser = await manager2.FindByIdAsync(user.Id);
+
+        if (retrievedUser == null)
+        {
+            Assert.Fail("User does not exist");
+        }
+
         retrievedUser.Logins.Count.Should().Be(2);
         retrievedUser
             .HasLogin(new RavenIdentityUserLogin("provider", "key", "displayName"))
@@ -558,10 +587,10 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     [Fact]
     public async Task ShouldAddUserLoginAfterOneWithSameParametersWasRemovedUsingManager()
     {
-        var scope = NewServiceScope();
-        var manager = scope.UserManager;
+        ServiceScope scope = NewServiceScope();
+        UserManager<RavenIdentityUser> manager = scope.UserManager;
 
-        var user = CreateTestUser();
+        RavenIdentityUser user = CreateTestUser();
         (await manager.CreateAsync(user)).Succeeded.Should().BeTrue();
 
         await manager.AddLoginAsync(user, new UserLoginInfo("provider", "key", "displayName"));
@@ -570,8 +599,8 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider/key", user.Id);
         await AssertCompareExchangeKeyExistsWithValueAsync("idnt/login/provider2/key2", user.Id);
 
-        var anotherUser = CreateTestUser();
-        var manager2 = NewServiceScope().UserManager;
+        RavenIdentityUser anotherUser = CreateTestUser();
+        UserManager<RavenIdentityUser> manager2 = NewServiceScope().UserManager;
         (await manager2.CreateAsync(anotherUser)).Succeeded.Should().BeTrue();
         (await manager2.AddLoginAsync(anotherUser, new UserLoginInfo("provider", "key", "displayName")))
             .Succeeded.Should().BeFalse("there is already a login registered with the same parameters.");
@@ -586,7 +615,7 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     [Fact]
     public async Task ShouldAddMultipleUserClaimsWithTheSameTypeButDifferentValuesUsingManager()
     {
-        var user = await SeedUserWithTwoRolesAndTwoClaims(
+        RavenIdentityUser user = await SeedUserWithTwoRolesAndTwoClaims(
             claim1Type: "type",
             claim1Value: "value",
             claim2Type: "type",
@@ -594,7 +623,12 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         );
         user.Should().NotBeNull();
 
-        var retrievedUser = await NewServiceScope().UserManager.FindByIdAsync(user.Id);
+        RavenIdentityUser? retrievedUser = await NewServiceScope().UserManager.FindByIdAsync(user.Id);
+
+        if (retrievedUser == null)
+        {
+            Assert.Fail("User does not exist");
+        }
 
         retrievedUser.Claims.Count.Should().Be(2);
         retrievedUser.Claims.Should().ContainSingle(claim => claim.Type == "type" && claim.Value == "value");
@@ -604,7 +638,7 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     [Fact]
     public async Task ShouldRemoveClaimsUsingManager()
     {
-        var user = await SeedUserWithTwoRolesAndTwoClaims(
+        RavenIdentityUser user = await SeedUserWithTwoRolesAndTwoClaims(
             claim1Type: "type",
             claim1Value: "value",
             claim2Type: "type",
@@ -613,42 +647,64 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         user.Should().NotBeNull();
 
         {
-            var manager = NewServiceScope().UserManager;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             await manager.RemoveClaimAsync(retrievedUser, new Claim("type", "value"));
         }
 
         {
-            var manager = NewServiceScope().UserManager;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             retrievedUser.Claims.Count.Should().Be(1);
             retrievedUser.Claims.Should().ContainSingle(claim => claim.Type == "type" && claim.Value == "value2");
-            await manager.AddClaimsAsync(retrievedUser, new[]
-            {
+            await manager.AddClaimsAsync(retrievedUser, [
                 new Claim("type99", "value99"),
-                new Claim("type100", "value100"),
-            });
+                new Claim("type100", "value100")
+            ]);
         }
 
         {
-            var manager = NewServiceScope().UserManager;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             retrievedUser.Claims.Count.Should().Be(3);
             retrievedUser.Claims.Should().ContainSingle(claim => claim.Type == "type" && claim.Value == "value2");
             retrievedUser.Claims.Should()
                 .ContainSingle(claim => claim.Type == "type99" && claim.Value == "value99");
             retrievedUser.Claims.Should()
                 .ContainSingle(claim => claim.Type == "type100" && claim.Value == "value100");
-            await manager.RemoveClaimsAsync(retrievedUser, new[]
-            {
+            await manager.RemoveClaimsAsync(retrievedUser, [
                 new Claim("type", "value2"),
-                new Claim("type100", "value100"),
-            });
+                new Claim("type100", "value100")
+            ]);
         }
 
         {
-            var manager = NewServiceScope().UserManager;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             retrievedUser.Claims.Count.Should().Be(1);
             retrievedUser.Claims.Should()
                 .ContainSingle(claim => claim.Type == "type99" && claim.Value == "value99");
@@ -658,7 +714,7 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     [Fact]
     public async Task ShouldReplaceClaimUsingManager()
     {
-        var user = await SeedUserWithTwoRolesAndTwoClaims(
+        RavenIdentityUser user = await SeedUserWithTwoRolesAndTwoClaims(
             claim1Type: "type",
             claim1Value: "value",
             claim2Type: "type",
@@ -667,8 +723,14 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         user.Should().NotBeNull();
 
         {
-            var manager = NewServiceScope().UserManager;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             await manager.ReplaceClaimAsync(
                 retrievedUser,
                 new Claim("type", "value"),
@@ -677,8 +739,14 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         }
 
         {
-            var manager = NewServiceScope().UserManager;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             retrievedUser.Claims.Count.Should().Be(2);
             retrievedUser.Claims.Should()
                 .ContainSingle(claim => claim.Type == "type" && claim.Value == "value2");
@@ -690,14 +758,14 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     [Fact]
     public async Task ShouldGetUsersWithGivenClaimUsingManager()
     {
-        var user1 = await SeedUserWithTwoRolesAndTwoClaims(
+        RavenIdentityUser user1 = await SeedUserWithTwoRolesAndTwoClaims(
             userName: Guid.NewGuid().ToString(),
             claim1Type: "type",
             claim1Value: "value",
             claim2Type: "c2type",
             claim2Value: "c2value"
         );
-        var user2 = await SeedUserWithTwoRolesAndTwoClaims(
+        RavenIdentityUser user2 = await SeedUserWithTwoRolesAndTwoClaims(
             userName: Guid.NewGuid().ToString(),
             claim1Type: "type",
             claim1Value: "value",
@@ -738,18 +806,24 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
 
         users.Should().NotBeNull();
         users.Count.Should().Be(2);
-        users.Select(item => item.Id).Should().Contain(new[] { user1.Id, user2.Id });
+        users.Select(item => item.Id).Should().Contain([user1.Id, user2.Id]);
     }
 
     [Fact]
     public async Task ShouldUpdateUserTokenIfAlreadyExistsWithSameProviderAndNameUsingManager()
     {
-        var user = await SeedUserWithTwoRolesAndTwoClaims();
+        RavenIdentityUser user = await SeedUserWithTwoRolesAndTwoClaims();
         user.Should().NotBeNull();
 
         {
-            var manager = NewServiceScope().UserManager;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             (await manager.SetAuthenticationTokenAsync(
                 retrievedUser,
                 "provider",
@@ -759,8 +833,14 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         }
 
         {
-            var manager = NewServiceScope().UserManager;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             retrievedUser.Tokens.Should().NotBeNull();
             retrievedUser.Tokens.Count.Should().Be(1);
             retrievedUser
@@ -777,8 +857,14 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         }
 
         {
-            var manager = NewServiceScope().UserManager;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             retrievedUser.Tokens.Should().NotBeNull();
             retrievedUser.Tokens.Count.Should().Be(1);
             retrievedUser
@@ -792,12 +878,18 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     [Fact]
     public async Task ShouldDeleteUserToken()
     {
-        var user = await SeedUserWithTwoRolesAndTwoClaims();
+        RavenIdentityUser user = await SeedUserWithTwoRolesAndTwoClaims();
         user.Should().NotBeNull();
 
         {
-            var manager = NewServiceScope().UserManager;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             (await manager.SetAuthenticationTokenAsync(
                 retrievedUser,
                 "provider",
@@ -819,8 +911,14 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         }
 
         {
-            var manager = NewServiceScope().UserManager;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             retrievedUser.Tokens.Should().NotBeNull();
             retrievedUser.Tokens.Count.Should().Be(3);
             retrievedUser
@@ -846,8 +944,14 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         }
 
         {
-            var manager = NewServiceScope().UserManager;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             retrievedUser.Tokens.Should().NotBeNull();
             retrievedUser.Tokens.Count.Should().Be(2);
             retrievedUser
@@ -866,10 +970,10 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     [Fact]
     public async Task ShouldNotSaveChangesOnCreateWhenAutoSaveIsFalseUsingManager()
     {
-        var scope = NewServiceScope();
-        var store = scope.UserStore;
+        ServiceScope scope = NewServiceScope();
+        RavenUserStore store = scope.UserStore;
         store.AutoSaveChanges = false;
-        var user = CreateTestUser();
+        RavenIdentityUser user = CreateTestUser();
 
         (await scope.UserManager.CreateAsync(user)).Succeeded.Should().BeTrue();
 
@@ -881,16 +985,22 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     [Fact]
     public async Task ShouldNotSaveChangesOnUpdateWhenAutoSaveIsFalseUsingManager()
     {
-        var user = await SeedUserWithTwoRolesAndTwoClaims();
+        RavenIdentityUser user = await SeedUserWithTwoRolesAndTwoClaims();
         user.Should().NotBeNull();
         user.Claims.Count.Should().Be(2);
 
         {
-            var scope = NewServiceScope();
-            var manager = scope.UserManager;
-            var store = scope.UserStore;
+            ServiceScope scope = NewServiceScope();
+            UserManager<RavenIdentityUser> manager = scope.UserManager;
+            RavenUserStore store = scope.UserStore;
             store.AutoSaveChanges = false;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             (await scope.UserManager.AddClaimAsync(retrievedUser, new Claim("t", "v"))).Succeeded.Should().BeTrue();
             retrievedUser
                 .Claims
@@ -900,9 +1010,14 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         }
 
         {
-            var manager = NewServiceScope().UserManager;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
-            retrievedUser.Should().NotBeNull();
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             retrievedUser.Claims.Count
                 .Should()
                 .Be(2, "user data was not persisted as auto save is false");
@@ -912,21 +1027,27 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     [Fact]
     public async Task ShouldNotSaveChangesOnDeleteWhenAutoSaveIsFalseUsingManager()
     {
-        var user = await SeedUserWithTwoRolesAndTwoClaims();
+        RavenIdentityUser user = await SeedUserWithTwoRolesAndTwoClaims();
         user.Should().NotBeNull();
 
         {
-            var scope = NewServiceScope();
-            var manager = scope.UserManager;
-            var store = scope.UserStore;
+            ServiceScope scope = NewServiceScope();
+            UserManager<RavenIdentityUser> manager = scope.UserManager;
+            RavenUserStore store = scope.UserStore;
             store.AutoSaveChanges = false;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
+
+            if (retrievedUser == null)
+            {
+                Assert.Fail("User does not exist");
+            }
+
             (await scope.UserManager.DeleteAsync(retrievedUser)).Succeeded.Should().BeTrue();
         }
 
         {
-            var manager = NewServiceScope().UserManager;
-            var retrievedUser = await manager.FindByIdAsync(user.Id);
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? retrievedUser = await manager.FindByIdAsync(user.Id);
             retrievedUser.Should().NotBeNull("user store auto save changed on delete was disabled.");
         }
     }
@@ -939,13 +1060,13 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
     [Fact]
     public async Task ShouldNotAddUserIfUserWithSameUsernameExistsWhenUsingStore()
     {
-        var user = await SeedUserWithTwoRolesAndTwoClaims();
+        RavenIdentityUser user = await SeedUserWithTwoRolesAndTwoClaims();
         user.Should().NotBeNull();
 
         {
-            var scope = NewServiceScope();
-            var store = scope.UserStore;
-            var result = await store.CreateAsync(CreateTestUser(user.UserName));
+            ServiceScope scope = NewServiceScope();
+            RavenUserStore store = scope.UserStore;
+            IdentityResult result = await store.CreateAsync(CreateTestUser(user.UserName));
             result.Succeeded.Should().BeFalse();
             result.Errors
                 .Should()
@@ -1390,7 +1511,8 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
 
         WaitForIndexing(NewServiceScope().DocumentStore);
 
-        RavenUserStore<RavenIdentityUser, RavenIdentityRole, UsersByClaimIndex, UsersByClaimIndexEntry> store = NewServiceScope().UserStore;
+        RavenUserStore<RavenIdentityUser, RavenIdentityRole, UsersByClaimIndex, UsersByClaimIndexEntry> store =
+            NewServiceScope().UserStore;
 
         var users = new List<RavenIdentityUser>();
         await foreach (RavenIdentityUser ravenIdentityUser in store.GetAllUsersAsync().ConfigureAwait(false))
@@ -1416,7 +1538,8 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
 
         WaitForIndexing(NewServiceScope().DocumentStore);
 
-        RavenUserStore<RavenIdentityUser, RavenIdentityRole, UsersByClaimIndex, UsersByClaimIndexEntry> store = NewServiceScope().UserStore;
+        RavenUserStore<RavenIdentityUser, RavenIdentityRole, UsersByClaimIndex, UsersByClaimIndexEntry> store =
+            NewServiceScope().UserStore;
 
         var cancellationTokenSource = new CancellationTokenSource();
         var users = new List<RavenIdentityUser>();

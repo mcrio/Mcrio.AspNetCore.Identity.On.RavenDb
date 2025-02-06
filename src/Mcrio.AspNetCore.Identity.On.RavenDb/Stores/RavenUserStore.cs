@@ -155,7 +155,7 @@ public abstract class RavenUserStore<TUser, TRole, TUniqueReservation, TUsersByC
         return new RavenIdentityUserLogin(
             loginInfo.LoginProvider,
             loginInfo.ProviderKey,
-            loginInfo.ProviderDisplayName
+            loginInfo.ProviderDisplayName ?? string.Empty
         );
     }
 }
@@ -317,6 +317,11 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
             .StoreAsync(user, cancellationToken)
             .ConfigureAwait(false);
 
+        Debug.Assert(
+            !string.IsNullOrWhiteSpace(user.NormalizedUserName),
+            "User normalized user name cannot be null or empty."
+        );
+
         if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
         {
             // reserve username
@@ -340,9 +345,14 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
             // reserve email if required
             if (OptionsAccessor.Value.User.RequireUniqueEmail)
             {
+                if (string.IsNullOrWhiteSpace(user.Email))
+                {
+                    throw new Exception("User email address cannot be null or empty.");
+                }
+
                 if (string.IsNullOrWhiteSpace(user.NormalizedEmail))
                 {
-                    throw new ArgumentNullException(nameof(user.NormalizedEmail));
+                    throw new Exception("User normalized email address cannot be null or empty.");
                 }
 
                 UniqueReservationDocumentUtility<TUniqueReservation> uniqueReservationUtil =
@@ -393,9 +403,14 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
             // reserve email if unique email required
             if (OptionsAccessor.Value.User.RequireUniqueEmail)
             {
+                if (string.IsNullOrWhiteSpace(user.Email))
+                {
+                    throw new Exception("User email address cannot be null or empty.");
+                }
+
                 if (string.IsNullOrWhiteSpace(user.NormalizedEmail))
                 {
-                    throw new ArgumentNullException(nameof(user.NormalizedEmail));
+                    throw new Exception("User normalized email address cannot be null or empty.");
                 }
 
                 string emailCompareExchangeKey = compareExchangeUtility.CreateCompareExchangeKey(
@@ -435,7 +450,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed creating user {}", ex.Message);
+            Logger.LogError(ex, "Failed creating user {Message}", ex.Message);
             return IdentityResult.Failed(ErrorDescriber.DefaultError());
         }
     }
@@ -445,9 +460,11 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         TUser user,
         CancellationToken cancellationToken = default)
     {
-        if (user == null)
+        ArgumentNullException.ThrowIfNull(user);
+
+        if (string.IsNullOrWhiteSpace(user.UserName))
         {
-            throw new ArgumentNullException(nameof(user));
+            throw new Exception("User name cannot be empty.");
         }
 
         ThrowIfCancelledOrDisposed(cancellationToken);
@@ -473,6 +490,11 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
             Debug.Assert(
                 !string.IsNullOrWhiteSpace(usernamePropertyChange.OldPropertyValue),
                 "Username must never be empty or NULL."
+            );
+
+            Debug.Assert(
+                !string.IsNullOrWhiteSpace(user.NormalizedUserName),
+                "Username normalized must never be empty or NULL."
             );
 
             // cluster wide as we will deal with compare exchange values either directly or as atomic guards
@@ -530,10 +552,21 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         {
             Debug.Assert(emailPropertyChange != null, $"Unexpected NULL value for {nameof(emailPropertyChange)}");
 
+            if (string.IsNullOrWhiteSpace(user.Email))
+            {
+                throw new Exception("User email cannot be empty.");
+            }
+
+            if (string.IsNullOrWhiteSpace(user.NormalizedEmail))
+            {
+                throw new Exception("User normalized email cannot be empty.");
+            }
+
             // cluster wide as we will deal with compare exchange values either directly or as atomic guards
             DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-            DocumentSession.Advanced.UseOptimisticConcurrency =
-                false; // cluster wide tx doesn't support opt. concurrency
+
+            // cluster wide tx doesn't support opt. concurrency
+            DocumentSession.Advanced.UseOptimisticConcurrency = false;
 
             if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
             {
@@ -596,7 +629,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed updating user {} {}", user.UserName, ex.Message);
+            Logger.LogError(ex, "Failed updating user {Username} {Message}", user.UserName, ex.Message);
             return IdentityResult.Failed(ErrorDescriber.DefaultError());
         }
 
@@ -613,10 +646,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         TUser user,
         CancellationToken cancellationToken = default)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
@@ -627,47 +657,88 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
 
         // cluster wide as we will deal with compare exchange values either directly or as atomic guards
         DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-        DocumentSession.Advanced.UseOptimisticConcurrency =
-            false; // cluster wide tx doesn't support opt. concurrency
+
+        // cluster wide tx doesn't support opt. concurrency
+        DocumentSession.Advanced.UseOptimisticConcurrency = false;
 
         if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
         {
-            UniqueReservationDocumentUtility<TUniqueReservation> usernameReservationUtil =
-                CreateUniqueReservationDocumentsUtility(
-                    UniqueReservationType.Username,
-                    user.NormalizedUserName
+            if (string.IsNullOrEmpty(user.NormalizedUserName))
+            {
+                Logger.LogWarning(
+                    "Unexpected empty normalized username when deleting user {UserId}. Deleting unique value reservation document was not handled",
+                    user.Id
                 );
-            await usernameReservationUtil.MarkReservationForDeletionAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                UniqueReservationDocumentUtility<TUniqueReservation> usernameReservationUtil =
+                    CreateUniqueReservationDocumentsUtility(
+                        UniqueReservationType.Username,
+                        user.NormalizedUserName
+                    );
+                await usernameReservationUtil.MarkReservationForDeletionAsync().ConfigureAwait(false);
+            }
 
             if (OptionsAccessor.Value.User.RequireUniqueEmail)
             {
-                UniqueReservationDocumentUtility<TUniqueReservation> emailReservationUtil =
-                    CreateUniqueReservationDocumentsUtility(
-                        UniqueReservationType.Email,
-                        user.NormalizedEmail
+                if (string.IsNullOrWhiteSpace(user.NormalizedEmail))
+                {
+                    Logger.LogWarning(
+                        "Unexpected empty normalized email when deleting user {UserId}. Deleting unique value reservation document was not handled",
+                        user.Id
                     );
-                await emailReservationUtil.MarkReservationForDeletionAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    UniqueReservationDocumentUtility<TUniqueReservation> emailReservationUtil =
+                        CreateUniqueReservationDocumentsUtility(
+                            UniqueReservationType.Email,
+                            user.NormalizedEmail
+                        );
+                    await emailReservationUtil.MarkReservationForDeletionAsync().ConfigureAwait(false);
+                }
             }
         }
         else
         {
             CompareExchangeUtility compareExchangeUtility = CreateCompareExchangeUtility();
 
-            await compareExchangeUtility.PrepareReservationForRemovalAsync(
-                UniqueReservationType.Username,
-                user.NormalizedUserName,
-                Logger,
-                cancellationToken
-            ).ConfigureAwait(false);
-
-            if (OptionsAccessor.Value.User.RequireUniqueEmail)
+            if (string.IsNullOrEmpty(user.NormalizedUserName))
+            {
+                Logger.LogWarning(
+                    "Unexpected empty normalized username when deleting user {UserId}. Deleting unique value reservation document was not handled",
+                    user.Id
+                );
+            }
+            else
             {
                 await compareExchangeUtility.PrepareReservationForRemovalAsync(
-                    UniqueReservationType.Email,
-                    user.NormalizedEmail!,
+                    UniqueReservationType.Username,
+                    user.NormalizedUserName,
                     Logger,
                     cancellationToken
                 ).ConfigureAwait(false);
+            }
+
+            if (OptionsAccessor.Value.User.RequireUniqueEmail)
+            {
+                if (string.IsNullOrWhiteSpace(user.NormalizedEmail))
+                {
+                    Logger.LogWarning(
+                        "Unexpected empty normalized email when deleting user {UserId}. Deleting unique value reservation document was not handled",
+                        user.Id
+                    );
+                }
+                else
+                {
+                    await compareExchangeUtility.PrepareReservationForRemovalAsync(
+                        UniqueReservationType.Email,
+                        user.NormalizedEmail!,
+                        Logger,
+                        cancellationToken
+                    ).ConfigureAwait(false);
+                }
             }
         }
 
@@ -690,10 +761,10 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
     }
 
     /// <inheritdoc/>
-    public override Task<TUser> FindByIdAsync(string userId, CancellationToken cancellationToken = default)
+    public override async Task<TUser?> FindByIdAsync(string userId, CancellationToken cancellationToken = default)
     {
         ThrowIfCancelledOrDisposed(cancellationToken);
-        return DocumentSession.LoadAsync<TUser>(userId, cancellationToken);
+        return await DocumentSession.LoadAsync<TUser>(userId, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -725,31 +796,24 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
     /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
     /// <exception cref="Exception">When there is more than one user matching the username.</exception>
-    public override Task<TUser> FindByNameAsync(
+    public override async Task<TUser?> FindByNameAsync(
         string normalizedUserName,
         CancellationToken cancellationToken = default)
     {
-        if (normalizedUserName == null)
-        {
-            throw new ArgumentNullException(nameof(normalizedUserName));
-        }
+        ArgumentNullException.ThrowIfNull(normalizedUserName);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        return Queryable.Where(
-                DocumentSession
-                    .Query<TUser>(), user => user.NormalizedUserName == normalizedUserName
-            )
-            .SingleOrDefaultAsync(cancellationToken);
+        return await DocumentSession.Query<TUser>()
+            .Where(user => user.NormalizedUserName == normalizedUserName)
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
     public override Task<IList<Claim>> GetClaimsAsync(TUser user, CancellationToken cancellationToken = default)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
         return Task.FromResult<IList<Claim>>(user.Claims.Select(claim => claim.ToClaim()).ToList());
@@ -761,15 +825,8 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         IEnumerable<Claim> claims,
         CancellationToken cancellationToken = default)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        if (claims == null)
-        {
-            throw new ArgumentNullException(nameof(claims));
-        }
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(claims);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
@@ -788,20 +845,9 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         Claim newClaim,
         CancellationToken cancellationToken = default)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        if (claim == null)
-        {
-            throw new ArgumentNullException(nameof(claim));
-        }
-
-        if (newClaim == null)
-        {
-            throw new ArgumentNullException(nameof(newClaim));
-        }
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(claim);
+        ArgumentNullException.ThrowIfNull(newClaim);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
@@ -816,15 +862,8 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         IEnumerable<Claim> claims,
         CancellationToken cancellationToken = default)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        if (claims == null)
-        {
-            throw new ArgumentNullException(nameof(claims));
-        }
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(claims);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
@@ -841,10 +880,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         Claim claim,
         CancellationToken cancellationToken = default)
     {
-        if (claim == null)
-        {
-            throw new ArgumentNullException(nameof(claim));
-        }
+        ArgumentNullException.ThrowIfNull(claim);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
@@ -879,15 +915,8 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         UserLoginInfo login,
         CancellationToken cancellationToken = default)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        if (login == null)
-        {
-            throw new ArgumentNullException(nameof(login));
-        }
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(login);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
@@ -899,8 +928,9 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
 
         // cluster wide as we will deal with compare exchange values either directly or as atomic guards
         DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-        DocumentSession.Advanced.UseOptimisticConcurrency =
-            false; // cluster wide tx doesn't support opt. concurrency
+
+        // cluster wide tx doesn't support opt. concurrency
+        DocumentSession.Advanced.UseOptimisticConcurrency = false;
 
         if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
         {
@@ -955,7 +985,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed adding login for user {}", user.Id);
+            Logger.LogError(ex, "Failed adding login for user {UserId}", user.Id);
         }
     }
 
@@ -966,10 +996,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         string providerKey,
         CancellationToken cancellationToken = default)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         if (string.IsNullOrWhiteSpace(loginProvider))
         {
@@ -1004,8 +1031,9 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
 
         // cluster wide as we will deal with compare exchange values either directly or as atomic guards
         DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-        DocumentSession.Advanced.UseOptimisticConcurrency =
-            false; // cluster wide tx doesn't support opt. concurrency
+
+        // cluster wide tx doesn't support opt. concurrency
+        DocumentSession.Advanced.UseOptimisticConcurrency = false;
 
         if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
         {
@@ -1049,10 +1077,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         TUser user,
         CancellationToken cancellationToken = default)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
@@ -1073,21 +1098,16 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
     /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
     /// <exception cref="Exception">When there is more than one user with the email.</exception>
-    public override Task<TUser> FindByEmailAsync(
+    public override async Task<TUser?> FindByEmailAsync(
         string normalizedEmail,
         CancellationToken cancellationToken = default)
     {
-        if (normalizedEmail == null)
-        {
-            throw new ArgumentNullException(nameof(normalizedEmail));
-        }
+        ArgumentNullException.ThrowIfNull(normalizedEmail);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        return Queryable.Where(
-                DocumentSession
-                    .Query<TUser>(), user => user.NormalizedEmail == normalizedEmail
-            )
+        return await DocumentSession
+            .Query<TUser>().Where(user => user.NormalizedEmail == normalizedEmail)
             .SingleOrDefaultAsync(token: cancellationToken);
     }
 
@@ -1103,10 +1123,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         string normalizedRoleName,
         CancellationToken cancellationToken = default)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         if (string.IsNullOrWhiteSpace(normalizedRoleName))
         {
@@ -1131,15 +1148,14 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        TRole role = await FindRoleAsync(normalizedRoleName, cancellationToken).ConfigureAwait(false);
+        TRole? role = await FindRoleAsync(normalizedRoleName, cancellationToken).ConfigureAwait(false);
 
         if (role is null)
         {
-            throw new InvalidOperationException($"Unknown role with normalized name {normalizedRoleName}");
+            return [];
         }
 
-        IQueryable<TUser> query =
-            Queryable.Where(DocumentSession.Query<TUser>(), item => item.Roles.Contains(role.Id));
+        IRavenQueryable<TUser> query = DocumentSession.Query<TUser>().Where(item => item.Roles.Contains(role.Id));
 
         IAsyncEnumerator<StreamResult<TUser>> streamResult = await DocumentSession
             .Advanced
@@ -1161,10 +1177,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         string normalizedRoleName,
         CancellationToken cancellationToken = default)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         if (string.IsNullOrWhiteSpace(normalizedRoleName))
         {
@@ -1173,7 +1186,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        TRole role = await FindRoleAsync(normalizedRoleName, cancellationToken).ConfigureAwait(false);
+        TRole? role = await FindRoleAsync(normalizedRoleName, cancellationToken).ConfigureAwait(false);
 
         if (role is null)
         {
@@ -1189,10 +1202,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         string normalizedRoleName,
         CancellationToken cancellationToken = default)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         if (string.IsNullOrWhiteSpace(normalizedRoleName))
         {
@@ -1201,7 +1211,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        TRole role = await FindRoleAsync(normalizedRoleName, cancellationToken).ConfigureAwait(false);
+        TRole? role = await FindRoleAsync(normalizedRoleName, cancellationToken).ConfigureAwait(false);
 
         if (role is null)
         {
@@ -1221,18 +1231,14 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         TUser user,
         CancellationToken cancellationToken = default)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
         ThrowIfCancelledOrDisposed(cancellationToken);
+        ArgumentNullException.ThrowIfNull(user);
 
         Dictionary<string, TRole> roles = await DocumentSession
             .LoadAsync<TRole>(user.Roles.Select(roleId => roleId.ToString()), cancellationToken)
             .ConfigureAwait(false);
 
-        return roles.Values.Select(role => role.Name).ToList();
+        return roles.Values.Where(role => role.Name is not null).Select(role => role.Name!).ToList();
     }
 
     /// <inheritdoc/>
@@ -1240,28 +1246,13 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         TUser user,
         string loginProvider,
         string name,
-        string value,
+        string? value,
         CancellationToken cancellationToken)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        if (loginProvider == null)
-        {
-            throw new ArgumentNullException(nameof(loginProvider));
-        }
-
-        if (name == null)
-        {
-            throw new ArgumentNullException(nameof(name));
-        }
-
-        if (value == null)
-        {
-            throw new ArgumentNullException(nameof(value));
-        }
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(loginProvider);
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(value);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
@@ -1300,7 +1291,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
     /// <param name="name">Token name.</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
     /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-    protected override Task<TAspUserToken> FindTokenAsync(
+    protected override Task<TAspUserToken?> FindTokenAsync(
         TUser user,
         string loginProvider,
         string name,
@@ -1311,10 +1302,10 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         TUserToken? userToken = user.GetToken(loginProvider, name);
         if (userToken is null)
         {
-            return Task.FromResult<TAspUserToken>(null!);
+            return Task.FromResult<TAspUserToken?>(null);
         }
 
-        return Task.FromResult(
+        return Task.FromResult<TAspUserToken?>(
             CreateUserToken(
                 user,
                 userToken.LoginProvider,
@@ -1366,16 +1357,13 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
     }
 
     /// <inheritdoc/>
-    protected override Task<TUser> FindUserAsync(string userId, CancellationToken cancellationToken)
+    protected override async Task<TUser?> FindUserAsync(string userId, CancellationToken cancellationToken)
     {
-        if (userId == null)
-        {
-            throw new ArgumentNullException(nameof(userId));
-        }
+        ArgumentNullException.ThrowIfNull(userId);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        return DocumentSession.LoadAsync<TUser>(userId, cancellationToken);
+        return await DocumentSession.LoadAsync<TUser>(userId, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1386,32 +1374,21 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
     /// <param name="providerKey">Provider key.</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
     /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-    protected override async Task<TAspUserLogin> FindUserLoginAsync(
+    protected override async Task<TAspUserLogin?> FindUserLoginAsync(
         string userId,
         string loginProvider,
         string providerKey,
         CancellationToken cancellationToken)
     {
-        if (userId == null)
-        {
-            throw new ArgumentNullException(nameof(userId));
-        }
-
-        if (loginProvider == null)
-        {
-            throw new ArgumentNullException(nameof(loginProvider));
-        }
-
-        if (providerKey == null)
-        {
-            throw new ArgumentNullException(nameof(providerKey));
-        }
+        ArgumentNullException.ThrowIfNull(userId);
+        ArgumentNullException.ThrowIfNull(loginProvider);
+        ArgumentNullException.ThrowIfNull(providerKey);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        TUser? user = await DocumentSession.LoadAsync<TUser>(userId, cancellationToken);
+        TUser? user = await DocumentSession.LoadAsync<TUser>(userId, cancellationToken).ConfigureAwait(false);
         TUserLogin? userLogin = user?.GetUserLogin(loginProvider, providerKey);
-        if (userLogin != null)
+        if (userLogin is not null)
         {
             return new TAspUserLogin
             {
@@ -1422,7 +1399,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
             };
         }
 
-        return null!;
+        return null;
     }
 
     /// <summary>
@@ -1432,20 +1409,13 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
     /// <param name="providerKey">Provider key.</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
     /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
-    protected override async Task<TAspUserLogin> FindUserLoginAsync(
+    protected override async Task<TAspUserLogin?> FindUserLoginAsync(
         string loginProvider,
         string providerKey,
         CancellationToken cancellationToken)
     {
-        if (loginProvider == null)
-        {
-            throw new ArgumentNullException(nameof(loginProvider));
-        }
-
-        if (providerKey == null)
-        {
-            throw new ArgumentNullException(nameof(providerKey));
-        }
+        ArgumentNullException.ThrowIfNull(loginProvider);
+        ArgumentNullException.ThrowIfNull(providerKey);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
@@ -1463,7 +1433,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
 
             if (loginReservation is null)
             {
-                return null!;
+                return null;
             }
 
             userId = loginReservation.ReferenceId;
@@ -1483,7 +1453,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
 
             if (loginCompareExchange is null)
             {
-                return null!;
+                return null;
             }
 
             userId = loginCompareExchange.Value;
@@ -1499,7 +1469,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
                 loginProvider,
                 userId
             );
-            return null!;
+            return null;
         }
 
         TUserLogin? userLogin = user.GetUserLogin(loginProvider, providerKey);
@@ -1510,7 +1480,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
                 user.UserName,
                 loginProvider
             );
-            return null!;
+            return null;
         }
 
         return new TAspUserLogin
@@ -1523,7 +1493,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
     }
 
     /// <inheritdoc/>
-    protected override Task<TRole> FindRoleAsync(string normalizedRoleName, CancellationToken cancellationToken)
+    protected override async Task<TRole?> FindRoleAsync(string normalizedRoleName, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(normalizedRoleName))
         {
@@ -1532,41 +1502,38 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        return DocumentSession.Query<TRole>()
+        return await DocumentSession
+            .Query<TRole>()
             .SingleOrDefaultAsync(role => role.NormalizedName == normalizedRoleName, cancellationToken);
     }
 
     /// <inheritdoc/>
-    protected override Task<TAspUserRole> FindUserRoleAsync(
+    protected override async Task<TAspUserRole?> FindUserRoleAsync(
         string userId,
         string roleId,
         CancellationToken cancellationToken)
     {
-        if (userId == null)
-        {
-            throw new ArgumentNullException(nameof(userId));
-        }
-
-        if (roleId == null)
-        {
-            throw new ArgumentNullException(nameof(roleId));
-        }
+        ArgumentNullException.ThrowIfNull(userId);
+        ArgumentNullException.ThrowIfNull(roleId);
 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        return Queryable.Select(
-                DocumentSession.Query<TUser>()
-                    .Where(
-                        user =>
-                            user.Id.Equals(userId)
-                            && user.Roles.Any(rId => rId.Equals(roleId))
-                    ), user => new TAspUserRole
-                {
-                    UserId = user.Id,
-                    RoleId = roleId,
-                }
-            )
-            .FirstOrDefaultAsync(cancellationToken);
+        TUser? user = await FindUserAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (user is null)
+        {
+            return null;
+        }
+
+        if (!user.Roles.Contains(roleId))
+        {
+            return null;
+        }
+
+        return new TAspUserRole
+        {
+            UserId = user.Id,
+            RoleId = roleId,
+        };
     }
 
     /// <summary>
@@ -1590,7 +1557,8 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
     /// <returns>Instance of <see cref="UniqueReservationDocumentUtility"/>.</returns>
     protected abstract UniqueReservationDocumentUtility<TUniqueReservation> CreateUniqueReservationDocumentsUtility(
         UniqueReservationType reservationType,
-        string uniqueValue);
+        string uniqueValue
+    );
 
     private static string CreateLoginReservationUniqueValue(string loginProvider, string providerKey)
     {

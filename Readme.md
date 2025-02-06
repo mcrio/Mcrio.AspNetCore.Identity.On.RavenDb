@@ -23,6 +23,13 @@ _(I am writing this document more than a year later so there may have been other
 - There is no implementation of the `UserOnly` store. If required use the provided user and roles stores and ignore
   roles related functionality.
 
+## V2 Breaking changes
+
+- Static index requirement. See [UsersByClaimIndex](src/Mcrio.AspNetCore.Identity.On.RavenDb/Stores/Index/UsersByClaimIndex.cs).  
+  This fixes a bug when searching for users by claims, where we looked up multiple child fields using an auto fan-out index
+  which may produce false results. Solution is to use the `intersect` query but `Corax` does not support it yet.
+- `RavenIdentityUser` requires setting the `Id` property. 
+
 ## Getting Started
 
 ### Try the sample application

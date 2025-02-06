@@ -4,7 +4,7 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model;
 /// Class that represents a value change.
 /// </summary>
 /// <typeparam name="T">Value type.</typeparam>
-public class PropertyChange<T>
+internal class PropertyChange<T>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PropertyChange{T}"/> class.

@@ -13,10 +13,10 @@ internal static class Initializer
         string? email = "",
         string phoneNumber = "",
         bool lockoutEnabled = false,
-        DateTimeOffset? lockoutEnd = default)
+        DateTimeOffset? lockoutEnd = null)
     {
         username ??= username ?? Guid.NewGuid().ToString();
-        return new RavenIdentityUser(username)
+        return new RavenIdentityUser("users/12345", username)
         {
             Id = Guid.NewGuid().ToString(),
             NormalizedUserName = username,

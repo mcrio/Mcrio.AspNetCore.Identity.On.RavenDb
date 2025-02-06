@@ -100,10 +100,7 @@ public abstract class RavenRoleStore<TRole, TUser, TUniqueReservation> : RavenRo
         UniqueValuesReservationOptions uniqueValuesReservationOptions)
         : base(documentSessionProvider(), errorDescriber, logger, uniqueValuesReservationOptions)
     {
-        if (documentSessionProvider == null)
-        {
-            throw new ArgumentNullException(nameof(documentSessionProvider));
-        }
+        ArgumentNullException.ThrowIfNull(documentSessionProvider);
     }
 
     /// <inheritdoc/>
@@ -196,19 +193,16 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
     /// <inheritdoc/>
     public virtual async Task<IdentityResult> CreateAsync(TRole role, CancellationToken cancellationToken = default)
     {
-        if (role == null)
-        {
-            throw new ArgumentNullException(nameof(role));
-        }
+        ArgumentNullException.ThrowIfNull(role);
 
         if (string.IsNullOrWhiteSpace(role.Name))
         {
-            throw new ArgumentNullException(nameof(role.Name));
+            throw new Exception("Role name cannot be null or empty.");
         }
 
         if (string.IsNullOrWhiteSpace(role.NormalizedName))
         {
-            throw new ArgumentNullException(nameof(role.NormalizedName));
+            throw new Exception("Role normalized name cannot be null or empty.");
         }
 
         ThrowIfCancelledOrDisposed(cancellationToken);
@@ -216,8 +210,7 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
         // cluster wide as we will deal with compare exchange values either directly or as atomic guards
         // for unique value reservations
         DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-        DocumentSession.Advanced.UseOptimisticConcurrency =
-            false; // cluster wide tx doesn't support opt. concurrency
+        DocumentSession.Advanced.UseOptimisticConcurrency = false; // cluster wide tx doesn't support opt. concurrency
 
         // no change vector as we rely on cluster wide optimistic concurrency and atomic guards
         await DocumentSession
@@ -291,10 +284,7 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
     {
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        if (role == null)
-        {
-            throw new ArgumentNullException(nameof(role));
-        }
+        ArgumentNullException.ThrowIfNull(role);
 
         if (!DocumentSession.Advanced.IsLoaded(role.Id))
         {
@@ -303,12 +293,12 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
 
         if (string.IsNullOrWhiteSpace(role.Name))
         {
-            throw new ArgumentNullException(nameof(role.Name));
+            throw new Exception("Role name cannot be null or empty.");
         }
 
         if (string.IsNullOrWhiteSpace(role.NormalizedName))
         {
-            throw new ArgumentNullException(nameof(role.NormalizedName));
+            throw new Exception("Role normalized name cannot be null or empty.");
         }
 
         if (!DocumentSession.Advanced.IsLoaded(role.Id))
@@ -333,8 +323,9 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
 
             // cluster wide as we will deal with compare exchange values either directly or as atomic guards
             DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-            DocumentSession.Advanced.UseOptimisticConcurrency =
-                false; // cluster wide tx doesn't support opt. concurrency
+
+            // cluster wide tx doesn't support opt. concurrency
+            DocumentSession.Advanced.UseOptimisticConcurrency = false;
 
             if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
             {
@@ -404,10 +395,7 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
     public virtual async Task<IdentityResult> DeleteAsync(TRole role, CancellationToken cancellationToken = default)
     {
         ThrowIfCancelledOrDisposed(cancellationToken);
-        if (role == null)
-        {
-            throw new ArgumentNullException(nameof(role));
-        }
+        ArgumentNullException.ThrowIfNull(role);
 
         if (!DocumentSession.Advanced.IsLoaded(role.Id))
         {
@@ -419,7 +407,7 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
             .CountAsync(
                 user => user.Roles.Any(roleId => roleId.Equals(role.Id)),
                 cancellationToken
-            );
+            ).ConfigureAwait(false);
         if (userInRoleCount > 0)
         {
             return IdentityResult.Failed(
@@ -432,8 +420,12 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
 
         // cluster wide as we will deal with compare exchange values either directly or as atomic guards
         DocumentSession.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
-        DocumentSession.Advanced.UseOptimisticConcurrency =
-            false; // cluster wide tx doesn't support opt. concurrency
+        DocumentSession.Advanced.UseOptimisticConcurrency = false; // cluster wide tx doesn't support opt. concurrency
+
+        Debug.Assert(
+            !string.IsNullOrWhiteSpace(role.NormalizedName),
+            $"Unexpected NULL value for {nameof(role.NormalizedName)}"
+        );
 
         if (UniqueValuesReservationOptions.UseReservationDocumentsForUniqueValues)
         {
@@ -472,39 +464,30 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
     public virtual Task<string> GetRoleIdAsync(TRole role, CancellationToken cancellationToken = default)
     {
         ThrowIfCancelledOrDisposed(cancellationToken);
-        if (role == null)
-        {
-            throw new ArgumentNullException(nameof(role));
-        }
+        ArgumentNullException.ThrowIfNull(role);
 
         return Task.FromResult(role.Id);
     }
 
     /// <inheritdoc/>
-    public virtual Task<string> GetRoleNameAsync(TRole role, CancellationToken cancellationToken = default)
+    public virtual Task<string?> GetRoleNameAsync(TRole role, CancellationToken cancellationToken = default)
     {
         ThrowIfCancelledOrDisposed(cancellationToken);
-        if (role == null)
-        {
-            throw new ArgumentNullException(nameof(role));
-        }
+        ArgumentNullException.ThrowIfNull(role);
 
         return Task.FromResult(role.Name);
     }
 
     /// <inheritdoc/>
-    public virtual Task SetRoleNameAsync(TRole role, string roleName, CancellationToken cancellationToken = default)
+    public virtual Task SetRoleNameAsync(TRole role, string? roleName, CancellationToken cancellationToken = default)
     {
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        if (role == null)
-        {
-            throw new ArgumentNullException(nameof(role));
-        }
+        ArgumentNullException.ThrowIfNull(role);
 
         if (string.IsNullOrWhiteSpace(roleName))
         {
-            throw new ArgumentNullException(nameof(roleName));
+            throw new ArgumentNullException(nameof(roleName), $"Unexpected NULL value for {nameof(roleName)}");
         }
 
         role.Name = roleName;
@@ -512,15 +495,12 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
     }
 
     /// <inheritdoc/>
-    public virtual Task<string> GetNormalizedRoleNameAsync(
+    public virtual Task<string?> GetNormalizedRoleNameAsync(
         TRole role,
         CancellationToken cancellationToken = default)
     {
         ThrowIfCancelledOrDisposed(cancellationToken);
-        if (role == null)
-        {
-            throw new ArgumentNullException(nameof(role));
-        }
+        ArgumentNullException.ThrowIfNull(role);
 
         return Task.FromResult(role.NormalizedName);
     }
@@ -528,19 +508,19 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
     /// <inheritdoc/>
     public virtual Task SetNormalizedRoleNameAsync(
         TRole role,
-        string normalizedName,
+        string? normalizedName,
         CancellationToken cancellationToken = default)
     {
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        if (role == null)
-        {
-            throw new ArgumentNullException(nameof(role));
-        }
+        ArgumentNullException.ThrowIfNull(role);
 
         if (string.IsNullOrWhiteSpace(normalizedName))
         {
-            throw new ArgumentNullException(nameof(normalizedName));
+            throw new ArgumentNullException(
+                nameof(normalizedName),
+                $"Unexpected NULL value for {nameof(normalizedName)}"
+            );
         }
 
         role.NormalizedName = normalizedName;
@@ -548,10 +528,10 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
     }
 
     /// <inheritdoc/>
-    public virtual Task<TRole> FindByIdAsync(string roleId, CancellationToken cancellationToken = default)
+    public virtual async Task<TRole?> FindByIdAsync(string roleId, CancellationToken cancellationToken = default)
     {
         ThrowIfCancelledOrDisposed(cancellationToken);
-        return DocumentSession.LoadAsync<TRole>(roleId, cancellationToken);
+        return await DocumentSession.LoadAsync<TRole>(roleId, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -561,7 +541,7 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
     /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
     /// <exception cref="Exception">When there is more than one result found.</exception>
-    public virtual Task<TRole> FindByNameAsync(
+    public virtual async Task<TRole?> FindByNameAsync(
         string normalizedRoleName,
         CancellationToken cancellationToken = default)
     {
@@ -571,8 +551,10 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
             throw new ArgumentNullException(nameof(normalizedRoleName));
         }
 
-        return DocumentSession.Query<TRole>()
-            .SingleOrDefaultAsync(role => role.NormalizedName == normalizedRoleName, cancellationToken);
+        return await DocumentSession
+            .Query<TRole>()
+            .SingleOrDefaultAsync(role => role.NormalizedName == normalizedRoleName, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -582,10 +564,7 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
     {
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        if (role == null)
-        {
-            throw new ArgumentNullException(nameof(role));
-        }
+        ArgumentNullException.ThrowIfNull(role);
 
         return Task.FromResult<IList<Claim>>(
             role.Claims.Select(claim => claim.ToClaim()).ToList()
@@ -600,15 +579,8 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
     {
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        if (role is null)
-        {
-            throw new ArgumentNullException(nameof(role));
-        }
-
-        if (claim is null)
-        {
-            throw new ArgumentNullException(nameof(claim));
-        }
+        ArgumentNullException.ThrowIfNull(role);
+        ArgumentNullException.ThrowIfNull(claim);
 
         role.AddClaim(CreateRoleClaim(claim));
         return Task.CompletedTask;
@@ -622,15 +594,8 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
     {
         ThrowIfCancelledOrDisposed(cancellationToken);
 
-        if (role is null)
-        {
-            throw new ArgumentNullException(nameof(role));
-        }
-
-        if (claim is null)
-        {
-            throw new ArgumentNullException(nameof(claim));
-        }
+        ArgumentNullException.ThrowIfNull(role);
+        ArgumentNullException.ThrowIfNull(claim);
 
         role.RemoveClaim(claim.Type, claim.Value);
         return Task.CompletedTask;
@@ -651,10 +616,7 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
     protected virtual void ThrowIfCancelledOrDisposed(CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(GetType().Name);
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 
     /// <summary>

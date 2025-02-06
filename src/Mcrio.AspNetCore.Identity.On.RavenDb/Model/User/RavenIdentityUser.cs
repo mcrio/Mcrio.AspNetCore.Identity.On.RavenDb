@@ -9,32 +9,33 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 /// <summary>
 /// Class that represents the RavenDB Identity User.
 /// </summary>
-public class
-    RavenIdentityUser : RavenIdentityUser<RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken>
+public class RavenIdentityUser : RavenIdentityUser<RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
     /// </summary>
+    /// <param name="id">User id. When NULL RavenDb will assign HiLO value automatically on store.</param>
     /// <param name="username">Username.</param>
-    public RavenIdentityUser(string username)
-        : base(username)
+    public RavenIdentityUser(string? id, string username)
+        : base(id, username)
     {
     }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
     /// </summary>
+    /// <param name="id">User id. When NULL RavenDb will assign HiLO value automatically on store.</param>
     /// <param name="username">Username.</param>
     /// <param name="email">User email.</param>
-    public RavenIdentityUser(string username, string email)
-        : base(username, email)
+    public RavenIdentityUser(string? id, string username, string email)
+        : base(id, username, email)
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
+    /// Required for object mapping.
     /// </summary>
-    public RavenIdentityUser()
+    protected RavenIdentityUser()
     {
     }
 }
@@ -51,40 +52,48 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     where TUserLogin : RavenIdentityUserLogin
     where TUserToken : RavenIdentityToken
 {
-    private HashSet<string> _roleIds = new HashSet<string>();
-    private List<TUserLogin> _logins = new List<TUserLogin>();
-    private List<TUserToken> _tokens = new List<TUserToken>();
-    private List<TUserClaim> _claims = new List<TUserClaim>();
+    private HashSet<string> _roleIds = [];
+    private List<TUserLogin> _logins = [];
+    private List<TUserToken> _tokens = [];
+    private List<TUserClaim> _claims = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RavenIdentityUser{TUserClaim,TUserLogin,TUserToken}"/> class.
     /// </summary>
+    /// <param name="id">User id. When NULL RavenDb will assign HiLO value automatically on store.</param>
     /// <param name="username">User's username.</param>
     /// <param name="email">User's email address.</param>
-    protected RavenIdentityUser(string username, string email)
+    protected RavenIdentityUser(string? id, string username, string email)
         : base(username)
     {
         Email = email;
+        Id = id!;
     }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
     /// </summary>
+    /// <param name="id">User id. When NULL RavenDb will assign HiLO value automatically on store.</param>
     /// <param name="username">User's username.</param>
-    protected RavenIdentityUser(string username)
+    protected RavenIdentityUser(string? id, string username)
         : base(username)
     {
+        Id = id!;
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
+    /// Required for object mapping.
     /// </summary>
+#pragma warning disable CS8618, CS9264
     protected RavenIdentityUser()
+#pragma warning restore CS8618, CS9264
     {
     }
 
-    /// <inheritdoc/>
-    public sealed override string Id { get; set; } = default!;
+    /// <summary>
+    /// Gets or sets the primary key for this user.
+    /// </summary>
+    public sealed override string Id { get; set; }
 
     /// <inheritdoc/>
     public sealed override string? Email { get; set; }
@@ -98,13 +107,13 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     public IReadOnlyList<TUserClaim> Claims
     {
         get => _claims.AsReadOnly();
-        private set => _claims = new List<TUserClaim>(value);
+        private set => _claims = [..value];
     }
 
     /// <inheritdoc/>
     IReadOnlyList<TUserClaim> IClaimsWriter<TUserClaim>.Claims
     {
-        set => _claims = new List<TUserClaim>(value);
+        set => _claims = [..value];
     }
 
     /// <summary>
@@ -113,7 +122,7 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     public IEnumerable<string> Roles
     {
         get => _roleIds.ToList().AsReadOnly();
-        private set => _roleIds = new HashSet<string>(value);
+        private set => _roleIds = [..value];
     }
 
     /// <summary>
@@ -122,7 +131,7 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     public IReadOnlyList<TUserLogin> Logins
     {
         get => _logins.AsReadOnly();
-        private set => _logins = new List<TUserLogin>(value);
+        private set => _logins = [..value];
     }
 
     /// <summary>
@@ -131,7 +140,7 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     public IReadOnlyList<TUserToken> Tokens
     {
         get => _tokens.AsReadOnly();
-        private set => _tokens = new List<TUserToken>(value);
+        private set => _tokens = [..value];
     }
 
     /// <summary>
@@ -141,11 +150,7 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     /// <returns>True if user is assigned to the role identified by the provided role id, otherwise False.</returns>
     public virtual bool HasRole(string roleId)
     {
-        if (roleId is null)
-        {
-            throw new ArgumentNullException(nameof(roleId));
-        }
-
+        ArgumentNullException.ThrowIfNull(roleId);
         return _roleIds.Contains(roleId);
     }
 
@@ -156,10 +161,7 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     /// <returns>True if the user has the given <see cref="UserLoginInfo"/>.</returns>
     public virtual bool HasLogin(TUserLogin userLogin)
     {
-        if (userLogin is null)
-        {
-            throw new ArgumentNullException(nameof(userLogin));
-        }
+        ArgumentNullException.ThrowIfNull(userLogin);
 
         return FindLogin(userLogin.LoginProvider, userLogin.ProviderKey) != null;
     }
@@ -172,15 +174,8 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     /// <returns><see cref="IdentityUserLogin{TKey}"/> that matches the given parameters or Null.</returns>
     public virtual TUserLogin? GetUserLogin(string loginProvider, string providerKey)
     {
-        if (loginProvider is null)
-        {
-            throw new ArgumentNullException(nameof(loginProvider));
-        }
-
-        if (providerKey == null)
-        {
-            throw new ArgumentNullException(nameof(providerKey));
-        }
+        ArgumentNullException.ThrowIfNull(loginProvider);
+        ArgumentNullException.ThrowIfNull(providerKey);
 
         return FindLogin(loginProvider, providerKey);
     }
@@ -192,10 +187,7 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     /// <returns>True if the user has the given token.</returns>
     public virtual bool HasToken(TUserToken token)
     {
-        if (token == null)
-        {
-            throw new ArgumentNullException(nameof(token));
-        }
+        ArgumentNullException.ThrowIfNull(token);
 
         return FindToken(token.LoginProvider, token.Name) != null;
     }
@@ -208,15 +200,8 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     /// <returns><see cref="IdentityUserToken{TKey}"/> if it exists otherwise Null.</returns>
     public virtual TUserToken? GetToken(string loginProvider, string tokenName)
     {
-        if (loginProvider == null)
-        {
-            throw new ArgumentNullException(nameof(loginProvider));
-        }
-
-        if (tokenName == null)
-        {
-            throw new ArgumentNullException(nameof(tokenName));
-        }
+        ArgumentNullException.ThrowIfNull(loginProvider);
+        ArgumentNullException.ThrowIfNull(tokenName);
 
         return FindToken(loginProvider, tokenName);
     }
@@ -227,10 +212,7 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     /// <param name="userToken">User token to add or use to replace an existing one.</param>
     internal virtual void AddOrReplaceToken(TUserToken userToken)
     {
-        if (userToken == null)
-        {
-            throw new ArgumentNullException(nameof(userToken));
-        }
+        ArgumentNullException.ThrowIfNull(userToken);
 
         TUserToken? existingToken = FindToken(
             userToken.LoginProvider,
@@ -264,10 +246,7 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     /// <param name="roleId">The role id we are assigning to the user.</param>
     internal virtual void AddRole(string roleId)
     {
-        if (roleId is null)
-        {
-            throw new ArgumentNullException(nameof(roleId));
-        }
+        ArgumentNullException.ThrowIfNull(roleId);
 
         _roleIds.Add(roleId);
     }
@@ -278,10 +257,7 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     /// <param name="roleId">The role id to remove from the role assignments.</param>
     internal virtual void RemoveRole(string roleId)
     {
-        if (roleId is null)
-        {
-            throw new ArgumentNullException(nameof(roleId));
-        }
+        ArgumentNullException.ThrowIfNull(roleId);
 
         _roleIds.Remove(roleId);
     }
@@ -292,10 +268,7 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     /// <param name="newUserLogin">User login we want to add.</param>
     internal virtual void AddLogin(TUserLogin newUserLogin)
     {
-        if (newUserLogin is null)
-        {
-            throw new ArgumentNullException(nameof(newUserLogin));
-        }
+        ArgumentNullException.ThrowIfNull(newUserLogin);
 
         if (HasLogin(newUserLogin))
         {
@@ -311,10 +284,7 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     /// <param name="userLoginToRemove">The user login to remove.</param>
     internal virtual void RemoveLogin(TUserLogin userLoginToRemove)
     {
-        if (userLoginToRemove is null)
-        {
-            throw new ArgumentNullException(nameof(userLoginToRemove));
-        }
+        ArgumentNullException.ThrowIfNull(userLoginToRemove);
 
         RemoveLogin(userLoginToRemove.LoginProvider, userLoginToRemove.ProviderKey);
     }

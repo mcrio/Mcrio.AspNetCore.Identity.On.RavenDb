@@ -48,7 +48,7 @@ public class CompareExchangeUtility
             UniqueReservationType.Username => "idnt/uname",
             UniqueReservationType.Email => "idnt/email",
             UniqueReservationType.Login => "idnt/login",
-            _ => throw new Exception($"Unhandled reservation type {reservationType}")
+            _ => throw new Exception($"Unhandled reservation type {reservationType}"),
         };
         return $"{prefix.TrimEnd('/')}/{expectedUniqueValue}";
     }

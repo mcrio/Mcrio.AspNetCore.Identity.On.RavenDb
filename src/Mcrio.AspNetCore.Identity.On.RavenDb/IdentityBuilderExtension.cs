@@ -55,12 +55,17 @@ public static class IdentityBuilderExtension
         where TUsersByClaimRavenDbIndex : UsersByClaimIndex<TUser>, new()
         where TUsersByClaimRavenDbIndexEntry : UsersByClaimIndexEntry
     {
-        return builder
-            .AddRavenDbStores<TRavenUserStore, TRavenRoleStore, TUser, TRole, UniqueReservation,
-                TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>(
-                documentSessionServiceLocator,
-                uniqueValuesReservationOptionsConfig
-            );
+        return builder.AddRavenDbStores<
+            TRavenUserStore,
+            TRavenRoleStore,
+            TUser,
+            TRole,
+            UniqueReservation,
+            TUsersByClaimRavenDbIndex,
+            TUsersByClaimRavenDbIndexEntry>(
+            documentSessionServiceLocator,
+            uniqueValuesReservationOptionsConfig
+        );
     }
 
     /// <summary>

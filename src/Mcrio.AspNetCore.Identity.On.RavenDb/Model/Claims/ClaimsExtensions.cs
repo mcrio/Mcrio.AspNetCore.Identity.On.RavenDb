@@ -20,15 +20,8 @@ public static class ClaimsExtensions
     public static bool HasClaim<TClaim>(this IClaimsReader<TClaim> holder, string type, string value)
         where TClaim : RavenIdentityClaim
     {
-        if (type == null)
-        {
-            throw new ArgumentNullException(nameof(type));
-        }
-
-        if (value == null)
-        {
-            throw new ArgumentNullException(nameof(value));
-        }
+        ArgumentNullException.ThrowIfNull(type);
+        ArgumentNullException.ThrowIfNull(value);
 
         if (holder.Claims == null)
         {
@@ -61,10 +54,7 @@ public static class ClaimsExtensions
     public static bool AddClaim<TClaim>(this IClaimsReader<TClaim> holder, TClaim claim)
         where TClaim : RavenIdentityClaim
     {
-        if (claim == null)
-        {
-            throw new ArgumentNullException(nameof(claim));
-        }
+        ArgumentNullException.ThrowIfNull(claim);
 
         if (holder.Claims == null)
         {
@@ -95,15 +85,8 @@ public static class ClaimsExtensions
     public static bool RemoveClaim<TClaim>(this IClaimsReader<TClaim> holder, string type, string value)
         where TClaim : RavenIdentityClaim
     {
-        if (type == null)
-        {
-            throw new ArgumentNullException(nameof(type));
-        }
-
-        if (value == null)
-        {
-            throw new ArgumentNullException(nameof(value));
-        }
+        ArgumentNullException.ThrowIfNull(type);
+        ArgumentNullException.ThrowIfNull(value);
 
         if (holder.Claims == null)
         {
@@ -151,15 +134,8 @@ public static class ClaimsExtensions
     public static bool ReplaceClaim<TClaim>(this IClaimsReader<TClaim> holder, TClaim oldClaim, TClaim newClaim)
         where TClaim : RavenIdentityClaim
     {
-        if (oldClaim == null)
-        {
-            throw new ArgumentNullException(nameof(oldClaim));
-        }
-
-        if (newClaim == null)
-        {
-            throw new ArgumentNullException(nameof(newClaim));
-        }
+        ArgumentNullException.ThrowIfNull(oldClaim);
+        ArgumentNullException.ThrowIfNull(newClaim);
 
         TClaim? claim = holder.GetClaim(oldClaim.Type, oldClaim.Value);
         if (claim != null)
