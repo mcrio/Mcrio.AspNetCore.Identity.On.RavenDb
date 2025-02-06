@@ -3,41 +3,40 @@ using System.Diagnostics.CodeAnalysis;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.Role;
 using Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 
-namespace Mcrio.AspNetCore.Identity.RavenDb.Tests
-{
-    [SuppressMessage("ReSharper", "SA1600", Justification = "Suppress missing documentation warning for test.")]
-    internal static class Initializer
-    {
-        public static RavenIdentityUser CreateTestUser(
-            string? username = null,
-            string? email = "",
-            string phoneNumber = "",
-            bool lockoutEnabled = false,
-            DateTimeOffset? lockoutEnd = default)
-        {
-            username ??= username ?? Guid.NewGuid().ToString();
-            return new RavenIdentityUser(username)
-            {
-                Id = Guid.NewGuid().ToString(),
-                NormalizedUserName = username,
-                Email = email,
-                NormalizedEmail = email,
-                PhoneNumber = phoneNumber,
-                LockoutEnabled = lockoutEnabled,
-                LockoutEnd = lockoutEnd,
-                SecurityStamp = Guid.NewGuid().ToString(),
-            };
-        }
+namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests;
 
-        public static RavenIdentityRole CreateTestRole(string? roleName = null)
+[SuppressMessage("ReSharper", "SA1600", Justification = "Suppress missing documentation warning for test.")]
+internal static class Initializer
+{
+    public static RavenIdentityUser CreateTestUser(
+        string? username = null,
+        string? email = "",
+        string phoneNumber = "",
+        bool lockoutEnabled = false,
+        DateTimeOffset? lockoutEnd = default)
+    {
+        username ??= username ?? Guid.NewGuid().ToString();
+        return new RavenIdentityUser(username)
         {
-            roleName ??= Guid.NewGuid().ToString();
-            var role = new RavenIdentityRole(roleName)
-            {
-                Id = Guid.NewGuid().ToString(),
-                NormalizedName = roleName,
-            };
-            return role;
-        }
+            Id = Guid.NewGuid().ToString(),
+            NormalizedUserName = username,
+            Email = email,
+            NormalizedEmail = email,
+            PhoneNumber = phoneNumber,
+            LockoutEnabled = lockoutEnabled,
+            LockoutEnd = lockoutEnd,
+            SecurityStamp = Guid.NewGuid().ToString(),
+        };
+    }
+
+    public static RavenIdentityRole CreateTestRole(string? roleName = null)
+    {
+        roleName ??= Guid.NewGuid().ToString();
+        var role = new RavenIdentityRole(roleName)
+        {
+            Id = Guid.NewGuid().ToString(),
+            NormalizedName = roleName,
+        };
+        return role;
     }
 }

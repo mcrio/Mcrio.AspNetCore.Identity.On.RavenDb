@@ -3,43 +3,42 @@ using Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Index;
 using Raven.Client.Documents;
 using Raven.TestDriver;
 
-namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
+namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration;
+
+public class RavenDbFixture : RavenTestDriver, IDisposable
 {
-    public class RavenDbFixture : RavenTestDriver, IDisposable
+    public RavenDbFixture()
     {
-        public RavenDbFixture()
+        DocumentStore = CreateDocumentStore();
+        RavenDbIdentityIndexCreator.CreateIndexes<UsersByClaimIndex>(DocumentStore, DocumentStore.Database);
+    }
+
+    public IDocumentStore DocumentStore { get; }
+
+    public sealed override void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
         {
-            DocumentStore = CreateDocumentStore();
-            RavenDbIdentityIndexCreator.CreateIndexes<UsersByClaimIndex>(DocumentStore, DocumentStore.Database);
+            DocumentStore.Dispose();
         }
+    }
 
-        public IDocumentStore DocumentStore { get; }
-
-        public sealed override void Dispose()
+    private IDocumentStore CreateDocumentStore()
+    {
+        ConfigureServer(new TestServerOptions
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
+            Licensing =
             {
-                DocumentStore.Dispose();
-            }
-        }
-
-        private IDocumentStore CreateDocumentStore()
-        {
-            ConfigureServer(new TestServerOptions
-            {
-                Licensing =
-                {
-                    EulaAccepted = true,
-                    LicensePath = RavenDbTestLicenseGetter.GetRavenDbDeveloperLicensePath(),
-                },
-            });
-            return GetDocumentStore();
-        }
+                EulaAccepted = true,
+                LicensePath = RavenDbTestLicenseGetter.GetRavenDbDeveloperLicensePath(),
+            },
+        });
+        return GetDocumentStore();
     }
 }

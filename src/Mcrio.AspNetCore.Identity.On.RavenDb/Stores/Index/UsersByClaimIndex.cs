@@ -6,16 +6,12 @@ using Raven.Client.Documents.Indexes;
 namespace Mcrio.AspNetCore.Identity.On.RavenDb.Stores.Index;
 
 /// <inheritdoc />
-public class UsersByClaimIndex : UsersByClaimIndex<RavenIdentityUser>
-{
-}
+public class UsersByClaimIndex : UsersByClaimIndex<RavenIdentityUser>;
 
 /// <inheritdoc />
 public abstract class UsersByClaimIndex<TUser>
     : UsersByClaimIndex<TUser, RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken>
-    where TUser : RavenIdentityUser
-{
-}
+    where TUser : RavenIdentityUser;
 
 /// <summary>
 /// User claims static fan-out index. This static index is required as the RavenDB Corax search engine does not support

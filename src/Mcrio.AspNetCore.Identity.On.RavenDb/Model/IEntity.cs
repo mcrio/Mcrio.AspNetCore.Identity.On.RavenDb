@@ -1,13 +1,12 @@
-namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model
+namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model;
+
+/// <summary>
+/// Defines a generalized entity that must define an Id property.
+/// </summary>
+public interface IEntity
 {
     /// <summary>
-    /// Defines a generalized entity that must define an Id property.
+    /// Gets the entity Id value.
     /// </summary>
-    public interface IEntity
-    {
-        /// <summary>
-        /// Gets the entity Id value.
-        /// </summary>
-        string Id { get; }
-    }
+    string Id { get; }
 }

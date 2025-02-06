@@ -6,36 +6,35 @@ using Microsoft.AspNetCore.Identity;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 
-namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration
+namespace Mcrio.AspNetCore.Identity.On.RavenDb.Tests.Integration;
+
+public class ServiceScope
 {
-    public class ServiceScope
+    internal ServiceScope(
+        RoleManager<RavenIdentityRole> roleManager,
+        UserManager<RavenIdentityUser> userManager,
+        IDocumentStore documentStore,
+        RavenUserStore userStore,
+        RavenRoleStore<RavenIdentityRole, RavenIdentityUser> roleStore,
+        IAsyncDocumentSession documentSession)
     {
-        internal ServiceScope(
-            RoleManager<RavenIdentityRole> roleManager,
-            UserManager<RavenIdentityUser> userManager,
-            IDocumentStore documentStore,
-            RavenUserStore userStore,
-            RavenRoleStore<RavenIdentityRole, RavenIdentityUser> roleStore,
-            IAsyncDocumentSession documentSession)
-        {
-            RoleManager = roleManager;
-            UserManager = userManager;
-            UserStore = userStore;
-            RoleStore = roleStore;
-            DocumentSession = documentSession;
-            DocumentStore = documentStore;
-        }
-
-        internal RoleManager<RavenIdentityRole> RoleManager { get; }
-
-        internal UserManager<RavenIdentityUser> UserManager { get; }
-
-        internal IDocumentStore DocumentStore { get; }
-
-        internal RavenUserStore UserStore { get; }
-
-        internal RavenRoleStore<RavenIdentityRole, RavenIdentityUser> RoleStore { get; }
-
-        internal IAsyncDocumentSession DocumentSession { get; }
+        RoleManager = roleManager;
+        UserManager = userManager;
+        UserStore = userStore;
+        RoleStore = roleStore;
+        DocumentSession = documentSession;
+        DocumentStore = documentStore;
     }
+
+    internal RoleManager<RavenIdentityRole> RoleManager { get; }
+
+    internal UserManager<RavenIdentityUser> UserManager { get; }
+
+    internal IDocumentStore DocumentStore { get; }
+
+    internal RavenUserStore UserStore { get; }
+
+    internal RavenRoleStore<RavenIdentityRole, RavenIdentityUser> RoleStore { get; }
+
+    internal IAsyncDocumentSession DocumentSession { get; }
 }

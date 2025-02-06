@@ -14,126 +14,125 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 
-namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample
+namespace Mcrio.AspNetCore.Identity.On.RavenDb.Sample;
+
+public class Startup
 {
-    public class Startup
+    public Startup(IConfiguration configuration)
     {
-        public Startup(IConfiguration configuration)
+        Configuration = configuration;
+    }
+
+    public IConfiguration Configuration { get; }
+
+    // This method gets called by the runtime. Use this method to add services to the container.
+    public void ConfigureServices(IServiceCollection services)
+    {
+        // Register document store
+        string? databaseName = Configuration.GetSection("RavenDbDatabase").Get<string>();
+        if (string.IsNullOrWhiteSpace(databaseName))
         {
-            Configuration = configuration;
+            throw new ArgumentNullException(nameof(databaseName), "The databaseName parameter is required.");
         }
 
-        public IConfiguration Configuration { get; }
-
-        // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
+        var store = new DocumentStore
         {
-            // Register document store
+            Urls = Configuration.GetSection("RavenDbUrls").Get<string[]>(),
+            Database = databaseName,
+        };
+        store.Conventions.FindCollectionName = type =>
+        {
+            if (IdentityRavenDbConventions.TryGetCollectionName(
+                    type,
+                    out string? collectionName))
+            {
+                return collectionName;
+            }
+
+            return DocumentConventions.DefaultGetCollectionName(type);
+        };
+        store.Initialize();
+        store.EnsureDatabaseExists(databaseName, true);
+
+        services.AddSingleton<IDocumentStore>(store);
+
+        // Register scoped document session
+        services.AddScoped(
+            provider => provider.GetRequiredService<IDocumentStore>().OpenAsyncSession()
+        );
+
+        // Add identity
+        services
+            .AddIdentity<RavenIdentityUser, RavenIdentityRole>(
+                options =>
+                {
+                    options.User.RequireUniqueEmail = true;
+                    options.SignIn.RequireConfirmedEmail = false;
+                }
+            )
+            .AddRavenDbStores<
+                RavenUserStore, 
+                RavenRoleStore, 
+                RavenIdentityUser, 
+                RavenIdentityRole,
+                UsersByClaimIndex,
+                UsersByClaimIndexEntry>(
+                provider => provider.GetRequiredService<IAsyncDocumentSession>()
+            )
+            .AddDefaultUI()
+            .AddDefaultTokenProviders();
+
+        // Facebook test authentication
+        services.AddAuthentication(o =>
+            {
+                o.DefaultScheme = IdentityConstants.ApplicationScheme;
+                o.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+            })
+            .AddFacebook(facebookOptions =>
+            {
+                facebookOptions.AppId = Configuration["FacebookAppId"];
+                facebookOptions.AppSecret = Configuration["FacebookAppSecret"];
+            });
+
+        services.AddRazorPages();
+    }
+
+    // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+    {
+        if (env.IsDevelopment())
+        {
+            app.UseDeveloperExceptionPage();
+
+            // Create static indexes
             string? databaseName = Configuration.GetSection("RavenDbDatabase").Get<string>();
             if (string.IsNullOrWhiteSpace(databaseName))
             {
                 throw new ArgumentNullException(nameof(databaseName), "The databaseName parameter is required.");
             }
 
-            var store = new DocumentStore
-            {
-                Urls = Configuration.GetSection("RavenDbUrls").Get<string[]>(),
-                Database = databaseName,
-            };
-            store.Conventions.FindCollectionName = type =>
-            {
-                if (IdentityRavenDbConventions.TryGetCollectionName(
-                        type,
-                        out string? collectionName))
-                {
-                    return collectionName;
-                }
-
-                return DocumentConventions.DefaultGetCollectionName(type);
-            };
-            store.Initialize();
-            store.EnsureDatabaseExists(databaseName, true);
-
-            services.AddSingleton<IDocumentStore>(store);
-
-            // Register scoped document session
-            services.AddScoped(
-                provider => provider.GetRequiredService<IDocumentStore>().OpenAsyncSession()
+            IDocumentStore documentStore = app.ApplicationServices.GetRequiredService<IDocumentStore>();
+            RavenDbIdentityIndexCreator.CreateIndexes<UsersByClaimIndex>(
+                documentStore,
+                databaseName
             );
-
-            // Add identity
-            services
-                .AddIdentity<RavenIdentityUser, RavenIdentityRole>(
-                    options =>
-                    {
-                        options.User.RequireUniqueEmail = true;
-                        options.SignIn.RequireConfirmedEmail = false;
-                    }
-                )
-                .AddRavenDbStores<
-                    RavenUserStore, 
-                    RavenRoleStore, 
-                    RavenIdentityUser, 
-                    RavenIdentityRole,
-                    UsersByClaimIndex,
-                    UsersByClaimIndexEntry>(
-                    provider => provider.GetRequiredService<IAsyncDocumentSession>()
-                )
-                .AddDefaultUI()
-                .AddDefaultTokenProviders();
-
-            // Facebook test authentication
-            services.AddAuthentication(o =>
-                {
-                    o.DefaultScheme = IdentityConstants.ApplicationScheme;
-                    o.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-                })
-                .AddFacebook(facebookOptions =>
-                {
-                    facebookOptions.AppId = Configuration["FacebookAppId"];
-                    facebookOptions.AppSecret = Configuration["FacebookAppSecret"];
-                });
-
-            services.AddRazorPages();
         }
-
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        else
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
+            app.UseExceptionHandler("/Error");
 
-                // Create static indexes
-                string? databaseName = Configuration.GetSection("RavenDbDatabase").Get<string>();
-                if (string.IsNullOrWhiteSpace(databaseName))
-                {
-                    throw new ArgumentNullException(nameof(databaseName), "The databaseName parameter is required.");
-                }
-
-                IDocumentStore documentStore = app.ApplicationServices.GetRequiredService<IDocumentStore>();
-                RavenDbIdentityIndexCreator.CreateIndexes<UsersByClaimIndex>(
-                    documentStore,
-                    databaseName
-                );
-            }
-            else
-            {
-                app.UseExceptionHandler("/Error");
-
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
-            }
-
-            app.UseHttpsRedirection();
-            app.UseStaticFiles();
-
-            app.UseRouting();
-
-            app.UseAuthentication();
-            app.UseAuthorization();
-
-            app.UseEndpoints(endpoints => { endpoints.MapRazorPages(); });
+            // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+            app.UseHsts();
         }
+
+        app.UseHttpsRedirection();
+        app.UseStaticFiles();
+
+        app.UseRouting();
+
+        app.UseAuthentication();
+        app.UseAuthorization();
+
+        app.UseEndpoints(endpoints => { endpoints.MapRazorPages(); });
     }
 }
