@@ -1,0 +1,27 @@
+version: '3.8'
+
+x-logging-defaults:
+  &logging-defaults
+  logging:
+    options:
+      max-size: 5m
+
+services:
+
+  # RavenDB
+  ravendb:
+    <<: *logging-defaults
+    image: ravendb/ravendb:7.2-ubuntu-latest
+    ports:
+      - "32921:8080"
+      # - 38888:38888
+    volumes:
+      - ravendb-data:/var/lib/ravendb/data
+    environment:
+      - RAVEN_Setup_Mode=None
+      - RAVEN_License_Eula_Accepted=true
+      - RAVEN_Security_UnsecuredAccessAllowed=PublicNetwork
+
+volumes:
+  ravendb-data:
+ 

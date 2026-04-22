@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/sample/">
     <Project Path="sample/Mcrio.AspNetCore.Identity.On.RavenDb.Sample/Mcrio.AspNetCore.Identity.On.RavenDb.Sample.csproj" />
+    <Project Path="sample/Mcrio.AspNetCore.Identity.On.RavenDb.SamplePasskeys/Mcrio.AspNetCore.Identity.On.RavenDb.SamplePasskeys.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Mcrio.AspNetCore.Identity.On.RavenDb/Mcrio.AspNetCore.Identity.On.RavenDb.csproj" />
