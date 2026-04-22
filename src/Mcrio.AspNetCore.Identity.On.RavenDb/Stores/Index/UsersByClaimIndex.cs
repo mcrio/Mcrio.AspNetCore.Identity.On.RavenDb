@@ -10,7 +10,7 @@ public class UsersByClaimIndex : UsersByClaimIndex<RavenIdentityUser>;
 
 /// <inheritdoc />
 public abstract class UsersByClaimIndex<TUser>
-    : UsersByClaimIndex<TUser, RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken>
+    : UsersByClaimIndex<TUser, RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken, RavenIdentityUserPasskey>
     where TUser : RavenIdentityUser;
 
 /// <summary>
@@ -22,14 +22,17 @@ public abstract class UsersByClaimIndex<TUser>
 /// <typeparam name="TUserClaim">Identity user claim type.</typeparam>
 /// <typeparam name="TUserLogin">Identity user login type.</typeparam>
 /// <typeparam name="TUserToken">Identity user token type.</typeparam>
-public abstract class UsersByClaimIndex<TUser, TUserClaim, TUserLogin, TUserToken> : AbstractIndexCreationTask<TUser>
-    where TUser : RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
+/// <typeparam name="TUserPasskey">Identity user passkey type.</typeparam>
+public abstract class
+    UsersByClaimIndex<TUser, TUserClaim, TUserLogin, TUserToken, TUserPasskey> : AbstractIndexCreationTask<TUser>
+    where TUser : RavenIdentityUser<TUserClaim, TUserLogin, TUserToken, TUserPasskey>
     where TUserClaim : RavenIdentityClaim
     where TUserToken : RavenIdentityToken
     where TUserLogin : RavenIdentityUserLogin
+    where TUserPasskey : RavenIdentityUserPasskey
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="UsersByClaimIndex{TUser,TUserClaim,TUserLogin,TUserToken}"/> class.
+    /// Initializes a new instance of the <see cref="UsersByClaimIndex{TUser,TUserClaim,TUserLogin,TUserToken,TUserPasskey}"/> class.
     /// </summary>
     protected UsersByClaimIndex()
     {

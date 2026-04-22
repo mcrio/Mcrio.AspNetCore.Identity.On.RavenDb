@@ -9,7 +9,11 @@ namespace Mcrio.AspNetCore.Identity.On.RavenDb.Model.User;
 /// <summary>
 /// Class that represents the RavenDB Identity User.
 /// </summary>
-public class RavenIdentityUser : RavenIdentityUser<RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken>
+public class RavenIdentityUser : RavenIdentityUser<
+    RavenIdentityClaim,
+    RavenIdentityUserLogin,
+    RavenIdentityToken,
+    RavenIdentityUserPasskey>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RavenIdentityUser"/> class.
@@ -46,19 +50,22 @@ public class RavenIdentityUser : RavenIdentityUser<RavenIdentityClaim, RavenIden
 /// <typeparam name="TUserClaim">Type of user claim.</typeparam>
 /// <typeparam name="TUserLogin">Type of user login.</typeparam>
 /// <typeparam name="TUserToken">Type of user token.</typeparam>
-public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
+/// <typeparam name="TUserPasskey">Type of user passkey.</typeparam>
+public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken, TUserPasskey>
     : IdentityUser<string>, IClaimsReader<TUserClaim>, IClaimsWriter<TUserClaim>, IEntity
     where TUserClaim : RavenIdentityClaim
     where TUserLogin : RavenIdentityUserLogin
     where TUserToken : RavenIdentityToken
+    where TUserPasskey : RavenIdentityUserPasskey
 {
     private HashSet<string> _roleIds = [];
     private List<TUserLogin> _logins = [];
     private List<TUserToken> _tokens = [];
     private List<TUserClaim> _claims = [];
+    private List<TUserPasskey> _passkeys = [];
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RavenIdentityUser{TUserClaim,TUserLogin,TUserToken}"/> class.
+    /// Initializes a new instance of the <see cref="RavenIdentityUser{TUserClaim,TUserLogin,TUserToken,TUserPasskey}"/> class.
     /// </summary>
     /// <param name="id">User id. When NULL RavenDb will assign HiLO value automatically on store.</param>
     /// <param name="username">User's username.</param>
@@ -141,6 +148,15 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
     {
         get => _tokens.AsReadOnly();
         private set => _tokens = [..value];
+    }
+
+    /// <summary>
+    /// List of <see cref="RavenIdentityUserPasskey"/> the user has.
+    /// </summary>
+    public IReadOnlyList<TUserPasskey> Passkeys
+    {
+        get => _passkeys.AsReadOnly();
+        private set => _passkeys = [..value];
     }
 
     /// <summary>
@@ -310,6 +326,46 @@ public abstract class RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
         if (existing != null)
         {
             _logins.Remove(existing);
+        }
+    }
+
+    /// <summary>
+    /// Adds a new passkey.
+    /// </summary>
+    /// <param name="passkey"></param>
+    /// <exception cref="ArgumentException">When passkey already exists.</exception>
+    internal void AddPasskey(TUserPasskey passkey)
+    {
+        ArgumentNullException.ThrowIfNull(passkey);
+        TUserPasskey? existing = FindPasskey(passkey.CredentialId);
+        if (existing is not null)
+        {
+            throw new ArgumentException("Adding new user passkey failed. Passkey already exists.");
+        }
+
+        _passkeys.Add(passkey);
+    }
+
+    /// <summary>
+    /// Finds a passkey by credential id.
+    /// </summary>
+    /// <param name="credentialId"></param>
+    /// <returns>Instance of <see cref="TUserPasskey"/> if found, otherwise Null.</returns>
+    internal TUserPasskey? FindPasskey(byte[] credentialId)
+    {
+        return _passkeys.SingleOrDefault(p => p.CredentialId.SequenceEqual(credentialId));
+    }
+
+    /// <summary>
+    /// Removes a passkey if it exists.
+    /// </summary>
+    /// <param name="credentialId"></param>
+    internal void RemovePasskey(byte[] credentialId)
+    {
+        TUserPasskey? existingPassKey = FindPasskey(credentialId);
+        if (existingPassKey is not null)
+        {
+            _passkeys.Remove(existingPassKey);
         }
     }
 

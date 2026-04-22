@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/sample/">
+    <Project Path="sample/Mcrio.AspNetCore.Identity.On.RavenDb.Sample/Mcrio.AspNetCore.Identity.On.RavenDb.Sample.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Mcrio.AspNetCore.Identity.On.RavenDb/Mcrio.AspNetCore.Identity.On.RavenDb.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Mcrio.AspNetCore.Identity.On.RavenDb.Tests/Mcrio.AspNetCore.Identity.On.RavenDb.Tests.csproj" />
+  </Folder>
+</Solution>

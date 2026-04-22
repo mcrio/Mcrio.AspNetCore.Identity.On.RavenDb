@@ -38,57 +38,48 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         );
 
         store.Dispose();
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.AddClaimsAsync(CreateTestUser(), new List<Claim>()));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await store.AddClaimsAsync(CreateTestUser(), new List<Claim>()));
         await Assert.ThrowsAsync<ObjectDisposedException>(
             testCode: async () => await store.AddLoginAsync(
                 CreateTestUser(),
                 new UserLoginInfo("p", "k", "d")
             ));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.AddToRoleAsync(CreateTestUser(), "foo"));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.GetClaimsAsync(CreateTestUser()));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.GetLoginsAsync(CreateTestUser()));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.GetRolesAsync(CreateTestUser()));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.IsInRoleAsync(CreateTestUser(), "foo"));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.RemoveClaimsAsync(CreateTestUser(), new List<Claim>()));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.RemoveLoginAsync(CreateTestUser(), "foo", "bar"));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.RemoveFromRoleAsync(CreateTestUser(), "foo"));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.RemoveClaimsAsync(CreateTestUser(), new Claim[0]));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await store.AddToRoleAsync(CreateTestUser(), "foo"));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () => await store.GetClaimsAsync(CreateTestUser()));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () => await store.GetLoginsAsync(CreateTestUser()));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () => await store.GetRolesAsync(CreateTestUser()));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await store.IsInRoleAsync(CreateTestUser(), "foo"));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await store.RemoveClaimsAsync(CreateTestUser(), new List<Claim>()));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await store.RemoveLoginAsync(CreateTestUser(), "foo", "bar"));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await store.RemoveFromRoleAsync(CreateTestUser(), "foo"));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await store.RemoveClaimsAsync(CreateTestUser(), new Claim[0]));
         await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
             await store.ReplaceClaimAsync(
                 CreateTestUser(),
                 new Claim("foo", "bar"),
                 new Claim("bar", "baz")
             ));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.FindByLoginAsync("foo", "bar"));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.FindByIdAsync("foo"));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.FindByNameAsync("foo"));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.CreateAsync(CreateTestUser()));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.UpdateAsync(CreateTestUser()));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.DeleteAsync(CreateTestUser()));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.SetEmailConfirmedAsync(CreateTestUser(), true));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.GetEmailConfirmedAsync(CreateTestUser()));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.SetPhoneNumberConfirmedAsync(CreateTestUser(), true));
-        await Assert.ThrowsAsync<ObjectDisposedException>(
-            async () => await store.GetPhoneNumberConfirmedAsync(CreateTestUser()));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () => await store.FindByLoginAsync("foo", "bar"));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () => await store.FindByIdAsync("foo"));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () => await store.FindByNameAsync("foo"));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () => await store.CreateAsync(CreateTestUser()));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () => await store.UpdateAsync(CreateTestUser()));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () => await store.DeleteAsync(CreateTestUser()));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await store.SetEmailConfirmedAsync(CreateTestUser(), true));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await store.GetEmailConfirmedAsync(CreateTestUser()));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await store.SetPhoneNumberConfirmedAsync(CreateTestUser(), true));
+        await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+            await store.GetPhoneNumberConfirmedAsync(CreateTestUser()));
     }
 
     [Fact]
@@ -191,7 +182,8 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         await Assert.ThrowsAsync<ArgumentNullException>(
             "login",
             async () => await store.AddLoginAsync(
-                new RavenIdentityUser("123", "fake"), null!
+                new RavenIdentityUser("123", "fake"),
+                null!
             )
         );
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -211,13 +203,16 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
             async () => await store.SetEmailConfirmedAsync(null!, true)
         );
         await Assert.ThrowsAsync<ArgumentNullException>(
-            "user", async () => await store.GetEmailAsync(null!)
+            "user",
+            async () => await store.GetEmailAsync(null!)
         );
         await Assert.ThrowsAsync<ArgumentNullException>(
-            "user", async () => await store.SetEmailAsync(null!, null)
+            "user",
+            async () => await store.SetEmailAsync(null!, null)
         );
         await Assert.ThrowsAsync<ArgumentNullException>(
-            "user", async () => await store.GetPhoneNumberAsync(null!)
+            "user",
+            async () => await store.GetPhoneNumberAsync(null!)
         );
         await Assert.ThrowsAsync<ArgumentNullException>(
             "user",
@@ -302,8 +297,9 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         RavenIdentityUser user = CreateTestUser(email: "foo@bar.com");
         IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
         WaitForIndexing(scope.DocumentStore);
-        (await NewServiceScope().UserManager.FindByNameAsync(user.UserName ??
-                                                             throw new Exception("Username expected not to be null")))
+        (await NewServiceScope().UserManager.FindByNameAsync(
+                user.UserName ??
+                throw new Exception("Username expected not to be null")))
             .Should().NotBeNull();
         (await NewServiceScope().UserManager.FindByIdAsync(user.Id)).Should().NotBeNull();
 
@@ -669,10 +665,12 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
 
             retrievedUser.Claims.Count.Should().Be(1);
             retrievedUser.Claims.Should().ContainSingle(claim => claim.Type == "type" && claim.Value == "value2");
-            await manager.AddClaimsAsync(retrievedUser, [
-                new Claim("type99", "value99"),
-                new Claim("type100", "value100")
-            ]);
+            await manager.AddClaimsAsync(
+                retrievedUser,
+                [
+                    new Claim("type99", "value99"),
+                    new Claim("type100", "value100")
+                ]);
         }
 
         {
@@ -690,10 +688,12 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
                 .ContainSingle(claim => claim.Type == "type99" && claim.Value == "value99");
             retrievedUser.Claims.Should()
                 .ContainSingle(claim => claim.Type == "type100" && claim.Value == "value100");
-            await manager.RemoveClaimsAsync(retrievedUser, [
-                new Claim("type", "value2"),
-                new Claim("type100", "value100")
-            ]);
+            await manager.RemoveClaimsAsync(
+                retrievedUser,
+                [
+                    new Claim("type", "value2"),
+                    new Claim("type100", "value100")
+                ]);
         }
 
         {
@@ -1070,8 +1070,7 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
             result.Succeeded.Should().BeFalse();
             result.Errors
                 .Should()
-                .Contain(
-                    error => error.Code == new IdentityErrorDescriber().DuplicateUserName(user.UserName).Code
+                .Contain(error => error.Code == new IdentityErrorDescriber().DuplicateUserName(user.UserName).Code
                 );
         }
 
@@ -1102,8 +1101,7 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
             result.Succeeded.Should().BeFalse();
             result.Errors
                 .Should()
-                .Contain(
-                    error => error.Code == new IdentityErrorDescriber().DuplicateUserName(user.UserName).Code
+                .Contain(error => error.Code == new IdentityErrorDescriber().DuplicateUserName(user.UserName).Code
                 );
         }
 
@@ -1288,7 +1286,6 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
             await store.SetNormalizedEmailAsync(user, "baz@baz.com");
             await store.UpdateAsync(user);
 
-
             await AssertCompareExchangeKeyExistsAsync("idnt/uname/some-user");
             await AssertCompareExchangeKeyDoesNotExistAsync("idnt/email/foo@bar.com");
             await AssertCompareExchangeKeyExistsAsync("idnt/email/baz@baz.com");
@@ -1414,8 +1411,7 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
 
         WaitForIndexing(scope.DocumentStore);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await manager.FindByEmailAsync("dupe@dupe.com")
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await manager.FindByEmailAsync("dupe@dupe.com")
         );
     }
 
@@ -1425,8 +1421,7 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         var manager = NewServiceScope().UserManager;
         var user = CreateTestUser();
         IdentityResultAssert.IsSuccess(await manager.CreateAsync(user));
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await manager.AddToRoleAsync(user, "bogus")
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await manager.AddToRoleAsync(user, "bogus")
         );
     }
 
@@ -1658,12 +1653,14 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
         {
             var manager = NewServiceScope().UserManager;
             var userFromDb = await manager.FindByIdAsync(user.Id);
-            (await manager.AddToRolesAsync(userFromDb, new[]
-            {
-                testRole.Name,
-                testRole2.Name,
-                testRole3.Name,
-            })).Succeeded.Should().BeTrue();
+            (await manager.AddToRolesAsync(
+                userFromDb,
+                new[]
+                {
+                    testRole.Name,
+                    testRole2.Name,
+                    testRole3.Name,
+                })).Succeeded.Should().BeTrue();
         }
 
         {
@@ -1692,6 +1689,392 @@ public class RavenUserStoreTest : IntegrationTestsBase<RavenIdentityUser, RavenI
             userFromDb.Roles.Count().Should().Be(2);
             userFromDb.Roles.Should().Contain(user.Roles);
         }
+    }
+
+    [Fact]
+    public async Task CanAddAndRetrievePasskey()
+    {
+        string userId;
+        {
+            RavenIdentityUser user = CreateTestUser();
+            user.Passkeys.Count.Should().Be(0);
+
+            (await NewServiceScope().UserManager.CreateAsync(user))
+                .Succeeded
+                .Should().BeTrue();
+
+            userId = user.Id;
+        }
+
+        byte[] credentialId = Guid.NewGuid().ToByteArray();
+        var passkey = new UserPasskeyInfo(
+            credentialId,
+            publicKey: [1, 2, 3, 4],
+            DateTimeOffset.UtcNow,
+            signCount: 0,
+            transports: ["usb"],
+            isUserVerified: false,
+            isBackupEligible: true,
+            isBackedUp: false,
+            attestationObject: [5, 6, 7],
+            clientDataJson: [8, 9])
+        {
+            Name = "InitialName",
+        };
+
+        {
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? user = await manager.FindByIdAsync(userId);
+            Assert.NotNull(user);
+
+            IdentityResultAssert.IsSuccess(await manager.AddOrUpdatePasskeyAsync(user, passkey));
+        }
+
+        {
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? user = await manager.FindByIdAsync(userId);
+            Assert.NotNull(user);
+
+            UserPasskeyInfo? fetchedPasskey = await manager.GetPasskeyAsync(user, credentialId);
+            Assert.NotNull(fetchedPasskey);
+            AssertPasskeysEqual(passkey, fetchedPasskey);
+
+            IList<UserPasskeyInfo> fetchedPasskeys = await manager.GetPasskeysAsync(user);
+            Assert.Single(fetchedPasskeys);
+            AssertPasskeysEqual(passkey, fetchedPasskeys[0]);
+        }
+    }
+
+    [Fact]
+    public async Task CanFindUserByPasskey()
+    {
+        string user1Id;
+        string user2Id;
+        {
+            RavenIdentityUser user = CreateTestUser();
+            user.Passkeys.Count.Should().Be(0);
+
+            (await NewServiceScope().UserManager.CreateAsync(user))
+                .Succeeded
+                .Should().BeTrue();
+
+            user1Id = user.Id;
+
+            user = CreateTestUser();
+            user.Passkeys.Count.Should().Be(0);
+
+            (await NewServiceScope().UserManager.CreateAsync(user))
+                .Succeeded
+                .Should().BeTrue();
+
+            user2Id = user.Id;
+        }
+
+        byte[] credentialIdUser1 = Guid.NewGuid().ToByteArray();
+        byte[] credentialIdUser2 = Guid.NewGuid().ToByteArray();
+
+        // user 1
+        {
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? user = await manager.FindByIdAsync(user1Id);
+            Assert.NotNull(user);
+
+            var passKey = new UserPasskeyInfo(
+                credentialIdUser1,
+                publicKey: [1, 2, 3, 4],
+                DateTimeOffset.UtcNow,
+                signCount: 0,
+                transports: ["usb"],
+                isUserVerified: false,
+                isBackupEligible: true,
+                isBackedUp: false,
+                attestationObject: [5, 6, 7],
+                clientDataJson: [8, 9])
+            {
+                Name = "User1Passkey",
+            };
+
+            IdentityResultAssert.IsSuccess(await manager.AddOrUpdatePasskeyAsync(user, passKey));
+        }
+
+        // user 2
+        {
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? user = await manager.FindByIdAsync(user2Id);
+            Assert.NotNull(user);
+
+            var passKey = new UserPasskeyInfo(
+                credentialIdUser2,
+                publicKey: [1, 2, 3, 4],
+                DateTimeOffset.UtcNow,
+                signCount: 0,
+                transports: ["usb"],
+                isUserVerified: false,
+                isBackupEligible: true,
+                isBackedUp: false,
+                attestationObject: [5, 6, 7],
+                clientDataJson: [8, 9])
+            {
+                Name = "User2Passkey",
+            };
+
+            IdentityResultAssert.IsSuccess(await manager.AddOrUpdatePasskeyAsync(user, passKey));
+        }
+
+        {
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+
+            Assert.NotEqual(credentialIdUser1, credentialIdUser2);
+
+            RavenIdentityUser? user1ByPassKey = await manager.FindByPasskeyIdAsync(credentialIdUser1);
+            Assert.NotNull(user1ByPassKey);
+            Assert.Equal(user1Id, user1ByPassKey.Id);
+
+            RavenIdentityUser? user2ByPassKey = await manager.FindByPasskeyIdAsync(credentialIdUser2);
+            Assert.NotNull(user2ByPassKey);
+            Assert.Equal(user2Id, user2ByPassKey.Id);
+
+            Assert.NotEqual(user1ByPassKey.Id, user2ByPassKey.Id);
+
+            RavenIdentityUser? nonMatchedUserByNonExistingPasskey =
+                await manager.FindByPasskeyIdAsync(Guid.NewGuid().ToByteArray());
+            Assert.Null(nonMatchedUserByNonExistingPasskey);
+        }
+
+        WaitForUserToContinueTheTest(NewServiceScope().DocumentStore);
+    }
+
+    [Fact]
+    public async Task CanRemovePasskey()
+    {
+        string userId;
+        {
+            RavenIdentityUser user = CreateTestUser();
+            user.Passkeys.Count.Should().Be(0);
+
+            (await NewServiceScope().UserManager.CreateAsync(user))
+                .Succeeded
+                .Should().BeTrue();
+
+            userId = user.Id;
+        }
+
+        var passkey = new UserPasskeyInfo(
+            credentialId: Guid.NewGuid().ToByteArray(),
+            publicKey: [1],
+            DateTimeOffset.UtcNow,
+            signCount: 0,
+            transports: null,
+            isUserVerified: false,
+            isBackupEligible: false,
+            isBackedUp: false,
+            attestationObject: [2],
+            clientDataJson: [3])
+        {
+            Name = "ToRemove",
+        };
+
+        {
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? user = await manager.FindByIdAsync(userId);
+            Assert.NotNull(user);
+
+            IdentityResultAssert.IsSuccess(await manager.AddOrUpdatePasskeyAsync(user, passkey));
+        }
+
+        {
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? user = await manager.FindByIdAsync(userId);
+            Assert.NotNull(user);
+
+            Assert.Single(await manager.GetPasskeysAsync(user));
+            IdentityResultAssert.IsSuccess(await manager.RemovePasskeyAsync(user, passkey.CredentialId));
+            Assert.Empty(await manager.GetPasskeysAsync(user));
+
+            // Second removal should not throw or change anything
+            IdentityResultAssert.IsSuccess(await manager.RemovePasskeyAsync(user, passkey.CredentialId));
+            Assert.Empty(await manager.GetPasskeysAsync(user));
+        }
+    }
+
+    [Fact]
+    public async Task CanAddMultiplePasskeys()
+    {
+        string userId;
+        {
+            RavenIdentityUser user = CreateTestUser();
+            user.Passkeys.Count.Should().Be(0);
+
+            (await NewServiceScope().UserManager.CreateAsync(user))
+                .Succeeded
+                .Should().BeTrue();
+
+            userId = user.Id;
+        }
+
+        var passkey1 = new UserPasskeyInfo(
+            credentialId: Guid.NewGuid().ToByteArray(),
+            publicKey: [1],
+            DateTimeOffset.UtcNow,
+            signCount: 0,
+            transports: ["usb"],
+            isUserVerified: false,
+            isBackupEligible: false,
+            isBackedUp: false,
+            attestationObject: [10],
+            clientDataJson: [11])
+        {
+            Name = "One",
+        };
+        var passkey2 = new UserPasskeyInfo(
+            credentialId: Guid.NewGuid().ToByteArray(),
+            publicKey: [2],
+            DateTimeOffset.UtcNow,
+            signCount: 5,
+            transports: ["nfc"],
+            isUserVerified: true,
+            isBackupEligible: false,
+            isBackedUp: false,
+            attestationObject: [12],
+            clientDataJson: [13])
+        {
+            Name = "Two",
+        };
+
+        {
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? user = await manager.FindByIdAsync(userId);
+            Assert.NotNull(user);
+
+            IdentityResultAssert.IsSuccess(await manager.AddOrUpdatePasskeyAsync(user, passkey1));
+            IdentityResultAssert.IsSuccess(await manager.AddOrUpdatePasskeyAsync(user, passkey2));
+        }
+
+        {
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? user = await manager.FindByIdAsync(userId);
+            Assert.NotNull(user);
+
+            IList<UserPasskeyInfo> all = await manager.GetPasskeysAsync(user);
+            Assert.Equal(2, all.Count);
+            Assert.Contains(all, p => p.Name == "One");
+            Assert.Contains(all, p => p.Name == "Two");
+        }
+
+        {
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? user = await manager.FindByIdAsync(userId);
+            Assert.NotNull(user);
+
+            UserPasskeyInfo? fetchedPasskey1 = await manager.GetPasskeyAsync(user, passkey1.CredentialId);
+            UserPasskeyInfo? fetchedPasskey2 = await manager.GetPasskeyAsync(user, passkey2.CredentialId);
+            Assert.NotNull(fetchedPasskey1);
+            Assert.NotNull(fetchedPasskey2);
+            AssertPasskeysEqual(passkey1, fetchedPasskey1);
+            AssertPasskeysEqual(passkey2, fetchedPasskey2);
+        }
+    }
+
+    [Fact]
+    public async Task UpdatingPasskeyChangesOnlyMutableFields()
+    {
+        string userId;
+        {
+            RavenIdentityUser user = CreateTestUser();
+            user.Passkeys.Count.Should().Be(0);
+
+            (await NewServiceScope().UserManager.CreateAsync(user))
+                .Succeeded
+                .Should().BeTrue();
+
+            userId = user.Id;
+        }
+
+        var original = new UserPasskeyInfo(
+            credentialId: Guid.NewGuid().ToByteArray(),
+            publicKey: [9, 9],
+            createdAt: DateTimeOffset.UtcNow,
+            signCount: 1,
+            transports: ["usb", "nfc"],
+            isUserVerified: false,
+            isBackupEligible: true,
+            isBackedUp: false,
+            attestationObject: [5],
+            clientDataJson: [6])
+        {
+            Name = "ImmutableTest",
+        };
+
+        {
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? user = await manager.FindByIdAsync(userId);
+            Assert.NotNull(user);
+
+            IdentityResultAssert.IsSuccess(await manager.AddOrUpdatePasskeyAsync(user, original));
+        }
+
+        // Attempt to modify both mutable and immutable fields
+        var updated = new UserPasskeyInfo(
+            credentialId: original.CredentialId,
+            publicKey: [0xFF, 0xFF],
+            createdAt: original.CreatedAt.AddMinutes(5),
+            signCount: 3,
+            transports: ["ble"],
+            isUserVerified: true,
+            isBackupEligible: false,
+            isBackedUp: true,
+            attestationObject: [7],
+            clientDataJson: [8])
+        {
+            Name = "Changed",
+        };
+
+        var expected = new UserPasskeyInfo(
+            credentialId: original.CredentialId,
+            publicKey: original.PublicKey,
+            createdAt: original.CreatedAt,
+            signCount: updated.SignCount,
+            transports: original.Transports,
+            isUserVerified: updated.IsUserVerified,
+            isBackupEligible: original.IsBackupEligible,
+            isBackedUp: updated.IsBackedUp,
+            attestationObject: original.AttestationObject,
+            clientDataJson: original.ClientDataJson)
+        {
+            Name = updated.Name,
+        };
+
+        {
+            UserManager<RavenIdentityUser> manager = NewServiceScope().UserManager;
+            RavenIdentityUser? user = await manager.FindByIdAsync(userId);
+            Assert.NotNull(user);
+
+            IdentityResultAssert.IsSuccess(await manager.AddOrUpdatePasskeyAsync(user, updated));
+
+            UserPasskeyInfo? stored = await manager.GetPasskeyAsync(user, original.CredentialId);
+            Assert.NotNull(stored);
+            AssertPasskeysEqual(expected, stored);
+        }
+    }
+
+    private static void AssertPasskeysEqual(UserPasskeyInfo expected, UserPasskeyInfo actual)
+    {
+        Assert.NotNull(expected);
+        Assert.NotNull(actual);
+
+        Assert.Equal(expected.Name, actual.Name);
+        Assert.Equal(expected.SignCount, actual.SignCount);
+        Assert.Equal(expected.IsBackedUp, actual.IsBackedUp);
+        Assert.Equal(expected.IsUserVerified, actual.IsUserVerified);
+        Assert.Equal(expected.PublicKey, actual.PublicKey);
+        Assert.Equal(expected.CreatedAt, actual.CreatedAt);
+        Assert.Equal(expected.IsBackupEligible, actual.IsBackupEligible);
+        Assert.Equal(expected.AttestationObject, actual.AttestationObject);
+        Assert.Equal(expected.ClientDataJson, actual.ClientDataJson);
+        Assert.Equal(expected.Transports, actual.Transports);
+
+        // todo will be introuces in one of the next versions
+        // Assert.Equal(expected.Aaguid, actual.Aaguid);
     }
 
     private ServiceScope NewServiceScope(bool requireUniqueEmail = false, bool protectPersonalData = false)

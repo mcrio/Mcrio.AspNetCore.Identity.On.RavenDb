@@ -81,7 +81,7 @@ public class RavenRoleStore<TRole, TUser> : RavenRoleStore<TRole, TUser, UniqueR
 
 /// <inheritdoc />
 public abstract class RavenRoleStore<TRole, TUser, TUniqueReservation> : RavenRoleStore<TRole, RavenIdentityClaim,
-    TUser, RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken, TUniqueReservation>
+    TUser, RavenIdentityClaim, RavenIdentityUserLogin, RavenIdentityToken, TUniqueReservation, RavenIdentityUserPasskey>
     where TRole : RavenIdentityRole
     where TUser : RavenIdentityUser
     where TUniqueReservation : UniqueReservation
@@ -120,21 +120,23 @@ public abstract class RavenRoleStore<TRole, TUser, TUniqueReservation> : RavenRo
 /// <typeparam name="TUserLogin">User login type.</typeparam>
 /// <typeparam name="TUserToken">User token type.</typeparam>
 /// <typeparam name="TUniqueReservation">Unique values reservation document type.</typeparam>
+/// <typeparam name="TUserPassKey">User passkey type.</typeparam>
 public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken,
-    TUniqueReservation> :
+    TUniqueReservation, TUserPassKey> :
     IRoleClaimStore<TRole>, IQueryableRoleStore<TRole>
     where TRole : RavenIdentityRole<TRoleClaim>
     where TRoleClaim : RavenIdentityClaim
-    where TUser : RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
+    where TUser : RavenIdentityUser<TUserClaim, TUserLogin, TUserToken, TUserPassKey>
     where TUserClaim : RavenIdentityClaim
     where TUserLogin : RavenIdentityUserLogin
     where TUserToken : RavenIdentityToken
     where TUniqueReservation : UniqueReservation
+    where TUserPassKey : RavenIdentityUserPasskey
 {
     private bool _disposed;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RavenRoleStore{TRole,TRoleClaim,TUser,TUserClaim,TUserLogin,TUserToken,TUniqueReservation}"/> class.
+    /// Initializes a new instance of the <see cref="RavenRoleStore{TRole,TRoleClaim,TUser,TUserClaim,TUserLogin,TUserToken,TUniqueReservation,TUserPassKey}"/> class.
     /// </summary>
     /// <param name="documentSession">Document session.</param>
     /// <param name="errorDescriber">Error describer.</param>
@@ -143,7 +145,7 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
     protected RavenRoleStore(
         IAsyncDocumentSession documentSession,
         IdentityErrorDescriber errorDescriber,
-        ILogger<RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken, TUniqueReservation>>
+        ILogger<RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken, TUniqueReservation, TUserPassKey>>
             logger,
         UniqueValuesReservationOptions uniqueValuesReservationOptions)
     {
@@ -179,7 +181,7 @@ public abstract class RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUser
     /// Gets or sets the logger.
     /// </summary>
     protected virtual ILogger<RavenRoleStore<TRole, TRoleClaim, TUser, TUserClaim, TUserLogin, TUserToken,
-            TUniqueReservation>>
+            TUniqueReservation, TUserPassKey>>
         Logger { get; }
 
     /// <summary>

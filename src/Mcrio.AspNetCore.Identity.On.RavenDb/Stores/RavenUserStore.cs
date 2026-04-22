@@ -102,7 +102,7 @@ public abstract class RavenUserStore<TUser, TRole, TUniqueReservation, TUsersByC
     TUsersByClaimRavenDbIndexEntry> : RavenUserStore<
     TUser, RavenIdentityClaim,
     RavenIdentityToken, RavenIdentityUserLogin, TRole, RavenIdentityClaim, TUniqueReservation,
-    TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>
+    TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry, RavenIdentityUserPasskey>
     where TUser : RavenIdentityUser
     where TRole : RavenIdentityRole
     where TUniqueReservation : UniqueReservation
@@ -158,28 +158,36 @@ public abstract class RavenUserStore<TUser, TRole, TUniqueReservation, TUsersByC
             loginInfo.ProviderDisplayName ?? string.Empty
         );
     }
+
+    /// <inheritdoc />
+    protected override RavenIdentityUserPasskey CreateUserPasskey(UserPasskeyInfo passkey)
+    {
+        return RavenIdentityUserPasskey.FromPasskeyInfo(passkey);
+    }
 }
 
 /// <inheritdoc />
 public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim,
-    TUniqueReservation, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>
+    TUniqueReservation, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry, TUserPasskey>
     : RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim, IdentityUserClaim<string>,
         IdentityUserRole<string>, IdentityUserLogin<string>, IdentityUserToken<string>,
-        IdentityRoleClaim<string>, TUniqueReservation, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>
-    where TUser : RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
+        IdentityRoleClaim<string>, TUniqueReservation, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry,
+        TUserPasskey>
+    where TUser : RavenIdentityUser<TUserClaim, TUserLogin, TUserToken, TUserPasskey>
     where TRole : RavenIdentityRole<TRoleClaim>
     where TUserClaim : RavenIdentityClaim
     where TRoleClaim : RavenIdentityClaim
     where TUserToken : RavenIdentityToken
     where TUserLogin : RavenIdentityUserLogin
+    where TUserPasskey : RavenIdentityUserPasskey
     where TUniqueReservation : UniqueReservation
     where TUsersByClaimRavenDbIndex : UsersByClaimIndex<
-        TUser, TUserClaim, TUserLogin, TUserToken
+        TUser, TUserClaim, TUserLogin, TUserToken, TUserPasskey
     >, new()
     where TUsersByClaimRavenDbIndexEntry : UsersByClaimIndexEntry
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim,TUniqueReservation, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry}"/> class.
+    /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim,TUniqueReservation, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry, TUserPasskey}"/> class.
     /// </summary>
     /// <param name="documentSession">Document session.</param>
     /// <param name="describer">Error describer.</param>
@@ -191,7 +199,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         IdentityErrorDescriber describer,
         IOptions<IdentityOptions> optionsAccessor,
         ILogger<RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim, TUniqueReservation,
-                TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>>
+                TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry, TUserPasskey>>
             logger,
         UniqueValuesReservationOptions uniqueValuesReservationOptions)
         : base(documentSession, describer, optionsAccessor, logger, uniqueValuesReservationOptions)
@@ -202,15 +210,16 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
 /// <inheritdoc />
 public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim,
     TAspUserClaim, TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim, TUniqueReservation,
-    TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry> :
-    UserStoreBase<TUser, TRole, string, TAspUserClaim, TAspUserRole, TAspUserLogin,
-        TAspUserToken, TAspRoleClaim>
-    where TUser : RavenIdentityUser<TUserClaim, TUserLogin, TUserToken>
+    TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry, TUserPasskey> :
+    UserStoreBase<TUser, TRole, string, TAspUserClaim, TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim>,
+    IUserPasskeyStore<TUser>
+    where TUser : RavenIdentityUser<TUserClaim, TUserLogin, TUserToken, TUserPasskey>
     where TRole : RavenIdentityRole<TRoleClaim>
     where TRoleClaim : RavenIdentityClaim
     where TUserClaim : RavenIdentityClaim
     where TUserToken : RavenIdentityToken
     where TUserLogin : RavenIdentityUserLogin
+    where TUserPasskey : RavenIdentityUserPasskey
     where TAspUserClaim : IdentityUserClaim<string>, new()
     where TAspUserRole : IdentityUserRole<string>, new()
     where TAspUserLogin : IdentityUserLogin<string>, new()
@@ -218,12 +227,12 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
     where TAspRoleClaim : IdentityRoleClaim<string>, new()
     where TUniqueReservation : UniqueReservation
     where TUsersByClaimRavenDbIndex : UsersByClaimIndex<
-        TUser, TUserClaim, TUserLogin, TUserToken
+        TUser, TUserClaim, TUserLogin, TUserToken, TUserPasskey
     >, new()
     where TUsersByClaimRavenDbIndexEntry : UsersByClaimIndexEntry
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim,TAspUserClaim,TAspUserRole,TAspUserLogin,TAspUserToken,TAspRoleClaim,TUniqueReservation, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry}"/> class.
+    /// Initializes a new instance of the <see cref="RavenUserStore{TUser,TUserClaim,TUserToken,TUserLogin,TRole,TRoleClaim,TAspUserClaim,TAspUserRole,TAspUserLogin,TAspUserToken,TAspRoleClaim,TUniqueReservation, TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry,TUserPasskey}"/> class.
     /// </summary>
     /// <param name="documentSession">Document session.</param>
     /// <param name="describer">Error describer.</param>
@@ -236,7 +245,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         IOptions<IdentityOptions> optionsAccessor,
         ILogger<RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim, TAspUserClaim,
                 TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim, TUniqueReservation,
-                TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>>
+                TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry, TUserPasskey>>
             logger,
         UniqueValuesReservationOptions uniqueValuesReservationOptions)
         : base(describer)
@@ -276,7 +285,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
     protected ILogger<RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, TRole, TRoleClaim,
             TAspUserClaim,
             TAspUserRole, TAspUserLogin, TAspUserToken, TAspRoleClaim, TUniqueReservation,
-            TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry>>
+            TUsersByClaimRavenDbIndex, TUsersByClaimRavenDbIndexEntry, TUserPasskey>>
         Logger { get; }
 
     /// <summary>
@@ -753,7 +762,7 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed deleting user {} {}", user.UserName, ex.Message);
+            Logger.LogError(ex, "Failed deleting user {Username}", user.UserName);
             return IdentityResult.Failed(ErrorDescriber.DefaultError());
         }
 
@@ -1082,12 +1091,11 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
         return Task.FromResult<IList<UserLoginInfo>>(
-            user.Logins.Select(
-                login => new UserLoginInfo(
-                    login.LoginProvider,
-                    login.ProviderKey,
-                    login.ProviderDisplayName
-                )).ToList()
+            user.Logins.Select(login => new UserLoginInfo(
+                login.LoginProvider,
+                login.ProviderKey,
+                login.ProviderDisplayName
+            )).ToList()
         );
     }
 
@@ -1257,6 +1265,78 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         ThrowIfCancelledOrDisposed(cancellationToken);
 
         user.AddOrReplaceToken(CreateUserToken(loginProvider, name, value));
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task AddOrUpdatePasskeyAsync(TUser user, UserPasskeyInfo passkey, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(passkey);
+
+        TUserPasskey? existingPassKey = user.FindPasskey(passkey.CredentialId);
+        if (existingPassKey is not null)
+        {
+            existingPassKey.UpdateFromUserPasskeyInfo(passkey);
+        }
+        else
+        {
+            user.AddPasskey(CreateUserPasskey(passkey));
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task<IList<UserPasskeyInfo>> GetPasskeysAsync(TUser user, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(user);
+
+        var passkeys = user.Passkeys.Select(passkey => passkey.ToUserPasskeyInfo()).ToList();
+        return Task.FromResult<IList<UserPasskeyInfo>>(passkeys);
+    }
+
+    /// <inheritdoc/>
+    public async Task<TUser?> FindByPasskeyIdAsync(byte[] credentialId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ThrowIfDisposed();
+
+        TUser? user = await DocumentSession
+            .Query<TUser>()
+            .SingleOrDefaultAsync(
+                user => user.Passkeys.Any(passkey => passkey.CredentialId == credentialId),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return user;
+    }
+
+    /// <inheritdoc/>
+    public Task<UserPasskeyInfo?> FindPasskeyAsync(TUser user, byte[] credentialId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(credentialId);
+
+        TUserPasskey? passkey = user.FindPasskey(credentialId);
+        return Task.FromResult(passkey?.ToUserPasskeyInfo());
+    }
+
+    /// <inheritdoc/>
+    public Task RemovePasskeyAsync(TUser user, byte[] credentialId, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(credentialId);
+
+        user.RemovePasskey(credentialId);
         return Task.CompletedTask;
     }
 
@@ -1559,6 +1639,13 @@ public abstract class RavenUserStore<TUser, TUserClaim, TUserToken, TUserLogin, 
         UniqueReservationType reservationType,
         string uniqueValue
     );
+
+    /// <summary>
+    /// Called to create a new instance of a <see cref="IdentityUserPasskey{TKey}"/>.
+    /// </summary>
+    /// <param name="passkey">The passkey.</param>
+    /// <returns>Instance of <see cref="TUserPasskey"/>.</returns>
+    protected abstract TUserPasskey CreateUserPasskey(UserPasskeyInfo passkey);
 
     private static string CreateLoginReservationUniqueValue(string loginProvider, string providerKey)
     {

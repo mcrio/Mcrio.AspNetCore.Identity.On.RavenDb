@@ -11,12 +11,11 @@ services:
   # RavenDB
   ravendb:
     <<: *logging-defaults
-    image: ravendb/ravendb:6.2-ubuntu-latest
+    image: ravendb/ravendb:7.2-ubuntu-latest
     ports:
       - "32921:8080"
     volumes:
-      - ravendb-data:/opt/RavenDB/Server/RavenData
-      - ravendb-conf:/opt/RavenDB/config
+      - ravendb-data:/var/lib/ravendb/data
     environment:
       - RAVEN_Setup_Mode=None
       - RAVEN_License_Eula_Accepted=true
@@ -24,5 +23,4 @@ services:
 
 volumes:
   ravendb-data:
-  ravendb-conf:
  
